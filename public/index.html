@@ -1314,6 +1314,7 @@ async function initApp() {
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
   await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources()]);
+  await linkMemberRecord();
   buildHome();
   buildSchedule();
   buildRoster();
@@ -1355,6 +1356,36 @@ async function loadWorkouts() {
 async function loadResources() {
   const rows = await supaGet('hrc_resources', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '100'});
   RESOURCES = rows || [];
+}
+
+// Link the signed-in auth user to their imported roster record.
+// Roster rows were imported with parent emails, so we match by
+// supabase_uid first, then by normalized athlete name.
+async function linkMemberRecord() {
+  if(!CU) return;
+  // Already linked?
+  let me = ATHLETES.find(a => a.supabase_uid === CU.id);
+  if(!me) {
+    const norm = s => (s||'').toLowerCase().replace(/[^a-z ]/g,'').trim();
+    me = ATHLETES.find(a => !a.supabase_uid && norm(a.name) === norm(CU.name));
+    if(me) {
+      await supaPatch('hrc_members', {id: me.id}, {supabase_uid: CU.id, email: me.email || CU.email});
+      me.supabase_uid = CU.id;
+    }
+  }
+  if(me) {
+    CU.member_id = me.id;
+    if(!['head-coach','asst-coach','admin'].includes(CU.role)) CU.role = me.role || CU.role;
+  } else if(['junior','rower'].includes(CU.role)) {
+    // New athlete not on the imported roster — create their member row
+    const initials = (CU.name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const color = AVATAR_COLORS[Math.abs((CU.name||'').length*7)%AVATAR_COLORS.length];
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, name: CU.name, email: CU.email,
+      role: 'junior', initials, color, sweep: true, scull: false, side: '', supabase_uid: CU.id,
+      created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_members', rec);
+    if(res) { ATHLETES.push(rec); CU.member_id = rec.id; }
+  }
 }
 
 // Check for existing session on load
@@ -1756,7 +1787,7 @@ function switchAthleteTab(tab) {
     </div>
     <div style="padding:16px">
       <div class="section-label">My Erg History</div>
-      ${ERG_SCORES.filter(e=>e.athlete_id===CU.id).slice(0,10).map(e=>`
+      ${ERG_SCORES.filter(e=>e.athlete_id===(CU.member_id||CU.id)).slice(0,10).map(e=>`
         <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
           <span style="font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;color:var(--text2)">${e.test} · ${e.date||''}</span>
           <span style="font-family:'Courier New',monospace;font-size:14px;color:var(--text)">${e.time_raw||fmtTime(e.time_seconds)}</span>
@@ -1992,7 +2023,7 @@ function populateAbsenceDropdown() {
   const sel = document.getElementById('absAthlete');
   const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
   sel.innerHTML = '<option value="">Select athlete…</option>' +
-    athletes.map(a=>`<option value="${a.id}" ${a.id===CU.id?'selected':''}>${a.name}</option>`).join('');
+    athletes.map(a=>`<option value="${a.id}" ${a.id===(CU.member_id||CU.id)?'selected':''}>${a.name}</option>`).join('');
 }
 
 function selectAbsSession(el, val) {
@@ -2038,7 +2069,7 @@ async function submitWorkout() {
   const notes = document.getElementById('wkNotes').value.trim();
   const msgEl = document.getElementById('wkMsg');
   if(!date||!type){msgEl.textContent='Please fill in date and session type.';msgEl.style.color='#e05c5c';msgEl.style.display='block';return;}
-  const record = {club:HRC_CLUB,athlete_id:CU.id,athlete_name:CU.name,date,type,details,distance_duration:dist,rpe:rpe?parseInt(rpe):null,notes,created_at:new Date().toISOString()};
+  const record = {club:HRC_CLUB,athlete_id:CU.member_id||CU.id,athlete_name:CU.name,date,type,details,distance_duration:dist,rpe:rpe?parseInt(rpe):null,notes,created_at:new Date().toISOString()};
   await supaInsert('hrc_workouts', record);
   WORKOUTS.unshift(record);
   msgEl.textContent='Workout logged.';msgEl.style.color='var(--green)';msgEl.style.display='block';
@@ -2053,7 +2084,7 @@ async function submitErgScore() {
   const msgEl = document.getElementById('ergMsg');
   if(!timeRaw){msgEl.textContent='Please enter your time.';msgEl.style.color='#e05c5c';msgEl.style.display='block';return;}
   const timeSec = parseErgTime(timeRaw);
-  const record = {club:HRC_CLUB,athlete_id:CU.id,athlete_name:CU.name,test,time_raw:timeRaw,time_seconds:timeSec,split_500:split||null,watts:watts?parseInt(watts):null,date:new Date().toISOString().split('T')[0],created_at:new Date().toISOString()};
+  const record = {club:HRC_CLUB,athlete_id:CU.member_id||CU.id,athlete_name:CU.name,test,time_raw:timeRaw,time_seconds:timeSec,split_500:split||null,watts:watts?parseInt(watts):null,date:new Date().toISOString().split('T')[0],created_at:new Date().toISOString()};
   await supaInsert('hrc_erg_scores', record);
   ERG_SCORES.unshift(record);
   msgEl.textContent='Erg score submitted.';msgEl.style.color='var(--green)';msgEl.style.display='block';
