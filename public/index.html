@@ -1055,6 +1055,7 @@ body {
       <div class="tab" onclick="switchCoachTab('workouts')">Workouts</div>
       <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
       <div class="tab" onclick="switchCoachTab('shifts')">Shifts</div>
+      <div class="tab" onclick="switchCoachTab('boats')">Boats</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
@@ -1187,6 +1188,14 @@ async function supaPatch(table, filters, data) {
   return res.ok;
 }
 
+async function supaDelete(table, filters) {
+  const qs = '?' + Object.entries(filters).map(([k,v])=>k+'=eq.'+encodeURIComponent(v)).join('&');
+  const res = await fetch(SUPA_URL+'/rest/v1/'+table+qs, {
+    method:'DELETE', headers: supaHeaders()
+  });
+  return res.ok;
+}
+
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
@@ -1199,6 +1208,8 @@ let WORKOUTS = [];
 let RESOURCES = [];
 let ANNOUNCEMENTS = [];
 let SHIFTS = [];
+let BOATS = [];
+let boatEditId = null;
 let shiftWeekStart = null;
 let currentScreen = 'home';
 let rosterFilter = 'all';
@@ -1217,6 +1228,12 @@ const BOAT_CLASSES = [
 ];
 
 const AVATAR_COLORS = ['#9E1B32','#7a5840','#4a6878','#5a7a5a','#7a4a6a','#4a7a8a','#8a6a4a','#6a4a8a'];
+
+const BOAT_STATUSES = [
+  {id:'in-service', label:'In Service', color:'#5a9a6a'},
+  {id:'repair', label:'In Repair', color:'#c0964a'},
+  {id:'retired', label:'Retired', color:'#7a7a7a'},
+];
 
 // ════════════════════════════════════════════
 // AUTH
@@ -1325,7 +1342,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1373,6 +1390,11 @@ async function loadResources() {
 async function loadShifts() {
   const rows = await supaGet('hrc_shifts', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '500'});
   SHIFTS = rows || [];
+}
+
+async function loadBoats() {
+  const rows = await supaGet('hrc_boats', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '200'});
+  BOATS = rows || [];
 }
 
 async function loadAnnouncements() {
@@ -1629,7 +1651,7 @@ function renderSavedLineups() {
     return `<div class="card" style="cursor:pointer" onclick="loadSavedLineup('${l.id}')">
       <div class="flex-between">
         <div>
-          <div class="card-title">${l.race||'—'} · ${bc?bc.label:l.boat_class}</div>
+          <div class="card-title">${l.race||'—'} · ${bc?bc.label:l.boat_class}${l.boat_name?' · '+l.boat_name:''}</div>
           <div class="card-sub">${filled}/${seats.length||'—'} seats${l.cox?' + cox':''} · saved ${dt}</div>
         </div>
         <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase">Load</div>
@@ -1656,6 +1678,7 @@ function loadSavedLineup(id) {
   const key = lineupRaceLabel()+'|'+lineupBoatClass;
   lineupData[key] = seats;
   lineupData[key+'|cox'] = l.cox||null;
+  lineupData[key+'|boat'] = l.boat_name||null;
   buildLineup();
   toast('Lineup loaded');
 }
@@ -1671,10 +1694,18 @@ function buildLineupBoard() {
   const seats = lineupData[key];
   const sides = bc.seats===8 ? ['S','P','S','P','S','P','S','P'] : bc.seats===4 ? ['S','P','S','P'] : ['S','P'];
 
+  const boatName = lineupData[key+'|boat']||null;
   let html = `<div class="boat-diagram">
     <div class="boat-hd">
       <span class="boat-label">${bc.label} — ${race.split('—')[0].trim()}</span>
       <button class="race-lineup-btn" onclick="clearLineup('${key}')">Clear</button>
+    </div>
+    <div class="seat-row" style="border-bottom:1px solid var(--border2)">
+      <div class="seat-num" style="color:var(--text3)">Hull</div>
+      <div class="seat-slot${boatName?' filled':''}" onclick="assignBoat('${key}')">
+        ${boatName||'<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">Tap to assign boat</span>'}
+      </div>
+      <div class="seat-side"></div>
     </div>
     ${seats.map((seat,i)=>`
       <div class="seat-row">
@@ -1709,9 +1740,23 @@ function assignCox(key) {
   if(name) { lineupData[key+'|cox']=name; buildLineupBoard(); }
 }
 
+function assignBoat(key) {
+  const available = BOATS.filter(b=>b.boat_class===lineupBoatClass && b.status!=='retired');
+  if(!available.length) { toast('No boats of this class in inventory'); return; }
+  const listing = available.map((b,i)=>`${i+1}. ${b.name}${b.status==='repair'?' (in repair)':''}`).join('\n');
+  const input = prompt('Assign boat:\n'+listing+'\n\nEnter number or name (blank to clear):');
+  if(input===null) return;
+  if(!input.trim()) { lineupData[key+'|boat']=null; buildLineupBoard(); return; }
+  const num = parseInt(input);
+  const boat = !isNaN(num) ? available[num-1] : available.find(b=>b.name.toLowerCase().includes(input.toLowerCase()));
+  if(boat) { lineupData[key+'|boat']=boat.name; buildLineupBoard(); }
+  else toast('Boat not found');
+}
+
 function clearLineup(key) { 
   lineupData[key]=Array(BOAT_CLASSES.find(c=>c.id===lineupBoatClass)?.seats||8).fill(null); 
   lineupData[key+'|cox']=null;
+  lineupData[key+'|boat']=null;
   buildLineupBoard(); 
 }
 
@@ -1725,6 +1770,7 @@ async function saveLineup() {
     boat_class: lineupBoatClass,
     seats: JSON.stringify(lineupData[key]),
     cox: lineupData[key+'|cox']||null,
+    boat_name: lineupData[key+'|boat']||null,
     created_by: CU.id,
     updated_at: new Date().toISOString()
   };
@@ -1816,6 +1862,10 @@ function switchCoachTab(tab) {
 
   } else if(tab==='shifts') {
     renderShifts();
+    return;
+
+  } else if(tab==='boats') {
+    renderBoats();
     return;
 
   } else if(tab==='profile') {
@@ -2045,6 +2095,112 @@ function switchAthleteTab(tab) {
         }).join('') : '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No resources shared yet.</div>'}
       </div>`;
   }
+}
+
+// ── BOAT INVENTORY ──
+function renderBoats() {
+  const el = document.getElementById('coachTabContent');
+  const isHead = ['head-coach','asst-coach','admin'].includes(CU.role);
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Boat Inventory</div>
+    ${isHead?`<button class="race-lineup-btn" onclick="openBoatForm()">+ Add Boat</button>`:''}
+  </div>`;
+  if(!BOATS.length) {
+    html += '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No boats added yet.</div>';
+  } else {
+    html += BOATS.map(b => {
+      const bc = BOAT_CLASSES.find(c=>c.id===b.boat_class);
+      const st = BOAT_STATUSES.find(s=>s.id===b.status) || BOAT_STATUSES[0];
+      return `<div class="card" style="cursor:pointer" onclick="openBoatForm('${b.id}')">
+        <div class="flex-between">
+          <div>
+            <div class="card-title">${b.name}</div>
+            <div class="card-sub">${bc?bc.label:(b.boat_class||'—')} · seats ${b.capacity||(bc?bc.seats:'—')}${b.assigned_group?' · '+b.assigned_group:''}</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
+        </div>
+        ${b.manufacturer||b.rigging_notes?`<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-top:6px">${b.manufacturer||''}${b.manufacturer&&b.rigging_notes?' · ':''}${b.rigging_notes||''}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+function openBoatForm(id) {
+  boatEditId = id || null;
+  const b = id ? BOATS.find(x=>x.id===id) : null;
+  const el = document.getElementById('coachTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group">
+      <label class="pr-label">Boat Name</label>
+      <input class="form-input" id="boatName" placeholder="e.g. Miss Fordham" value="${b?.name||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Class</label>
+      <select class="form-select" id="boatClass">
+        ${BOAT_CLASSES.map(c=>`<option value="${c.id}" ${b?.boat_class===c.id?'selected':''}>${c.label} (${c.seats} seats)</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Manufacturer / Model</label>
+      <input class="form-input" id="boatMfr" placeholder="e.g. Vespoli, Filippi" value="${b?.manufacturer||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Rigging Notes</label>
+      <textarea class="form-textarea" id="boatRigging" placeholder="Span, spread, oarlock height, etc.">${b?.rigging_notes||''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Status</label>
+      <select class="form-select" id="boatStatus">
+        ${BOAT_STATUSES.map(s=>`<option value="${s.id}" ${(b?.status||'in-service')===s.id?'selected':''}>${s.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Assigned Squad / Group</label>
+      <select class="form-select" id="boatGroup">
+        <option value="" ${!b?.assigned_group?'selected':''}>Any / Unassigned</option>
+        <option value="U17" ${b?.assigned_group==='U17'?'selected':''}>U17</option>
+        <option value="U19" ${b?.assigned_group==='U19'?'selected':''}>U19</option>
+      </select>
+    </div>
+    <button class="submit-btn" onclick="saveBoat()">${b?'Save Changes':'Add Boat'}</button>
+    ${b?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteBoat('${b.id}')">Delete Boat</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchCoachTab('boats')">Cancel</button>
+    <div id="boatMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveBoat() {
+  const name = document.getElementById('boatName').value.trim();
+  const boat_class = document.getElementById('boatClass').value;
+  const manufacturer = document.getElementById('boatMfr').value.trim();
+  const rigging_notes = document.getElementById('boatRigging').value.trim();
+  const status = document.getElementById('boatStatus').value;
+  const assigned_group = document.getElementById('boatGroup').value;
+  const msgEl = document.getElementById('boatMsg');
+  if(!name) { msgEl.textContent='Boat name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const bc = BOAT_CLASSES.find(c=>c.id===boat_class);
+
+  if(boatEditId) {
+    const ok = await supaPatch('hrc_boats', {id: boatEditId}, {name, boat_class, capacity: bc?.seats, manufacturer, rigging_notes, status, assigned_group});
+    if(ok) {
+      const b = BOATS.find(x=>x.id===boatEditId);
+      if(b) Object.assign(b, {name, boat_class, capacity: bc?.seats, manufacturer, rigging_notes, status, assigned_group});
+      toast('Boat updated'); switchCoachTab('boats');
+    } else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, name, boat_class, capacity: bc?.seats, manufacturer, rigging_notes, status, assigned_group, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_boats', rec);
+    if(res) { BOATS.push(rec); BOATS.sort((a,b2)=>(a.name||'').localeCompare(b2.name||'')); toast('Boat added'); switchCoachTab('boats'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteBoat(id) {
+  if(!confirm('Remove this boat from inventory?')) return;
+  const ok = await supaDelete('hrc_boats', {id});
+  if(ok) { BOATS = BOATS.filter(b=>b.id!==id); toast('Boat removed'); }
+  switchCoachTab('boats');
 }
 
 function getYouTubeId(url) {
