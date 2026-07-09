@@ -1020,11 +1020,13 @@ body {
     </div>
     <div class="section">
       <div class="section-label">Regatta</div>
-      <select class="form-select" id="lineupRace" onchange="buildLineupBoard()">
+      <select class="form-select" id="lineupRace" onchange="onLineupRaceChange()">
+        <option value="practice">Practice</option>
         <option>Philadelphia Youth Regatta — Jul 18</option>
         <option>Independence Day Regatta — Jul 24–26</option>
         <option>Royal Canadian Henley — Aug 4–9</option>
       </select>
+      <input class="form-input" id="lineupDate" type="date" style="margin-top:10px" onchange="buildLineupBoard()">
     </div>
     <div class="section">
       <div class="section-label">Boat Class</div>
@@ -1033,6 +1035,10 @@ body {
     <div id="lineupBoard"></div>
     <div class="p16">
       <button class="submit-btn coach-only" onclick="saveLineup()">Save Lineup</button>
+    </div>
+    <div class="section">
+      <div class="section-label">Saved Lineups</div>
+      <div id="savedLineups"></div>
     </div>
   </div>
 
@@ -1313,7 +1319,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1557,12 +1563,83 @@ function setRosterFilter(f) { rosterFilter=f; buildRoster(); }
 // ════════════════════════════════════════════
 // LINEUP BUILDER
 // ════════════════════════════════════════════
+let LINEUPS = [];
+
+function lineupRaceLabel() {
+  const sel = document.getElementById('lineupRace');
+  const date = document.getElementById('lineupDate')?.value || new Date().toISOString().split('T')[0];
+  if(!sel) return '';
+  return sel.value === 'practice' ? 'Practice — ' + date : sel.value;
+}
+
+function onLineupRaceChange() {
+  const sel = document.getElementById('lineupRace');
+  const dateEl = document.getElementById('lineupDate');
+  if(dateEl) dateEl.style.display = sel.value === 'practice' ? 'block' : 'none';
+  buildLineupBoard();
+}
+
+async function loadLineups() {
+  const rows = await supaGet('hrc_lineups', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'updated_at.desc', 'limit': '60'});
+  LINEUPS = rows || [];
+}
+
 function buildLineup() {
   const classes = BOAT_CLASSES;
   document.getElementById('boatClassFilter').innerHTML = classes.map(c=>
     `<div class="fpill${c.id===lineupBoatClass?' active':''}" onclick="setBoatClass('${c.id}')">${c.label}</div>`
   ).join('');
-  buildLineupBoard();
+  const dateEl = document.getElementById('lineupDate');
+  if(dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  onLineupRaceChange();
+  renderSavedLineups();
+}
+
+function renderSavedLineups() {
+  const el = document.getElementById('savedLineups');
+  if(!el) return;
+  if(!LINEUPS.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No saved lineups yet.</div>';
+    return;
+  }
+  el.innerHTML = LINEUPS.map(l => {
+    const bc = BOAT_CLASSES.find(c=>c.id===l.boat_class);
+    let seats = [];
+    try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
+    const filled = seats.filter(Boolean).length;
+    const dt = l.updated_at ? new Date(l.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+    return `<div class="card" style="cursor:pointer" onclick="loadSavedLineup('${l.id}')">
+      <div class="flex-between">
+        <div>
+          <div class="card-title">${l.race||'—'} · ${bc?bc.label:l.boat_class}</div>
+          <div class="card-sub">${filled}/${seats.length||'—'} seats${l.cox?' + cox':''} · saved ${dt}</div>
+        </div>
+        <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase">Load</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadSavedLineup(id) {
+  const l = LINEUPS.find(x=>x.id===id);
+  if(!l) return;
+  let seats = [];
+  try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
+  lineupBoatClass = l.boat_class;
+  // Restore race selector
+  const sel = document.getElementById('lineupRace');
+  if(l.race && l.race.startsWith('Practice')) {
+    sel.value = 'practice';
+    const dateMatch = l.race.match(/\d{4}-\d{2}-\d{2}/);
+    if(dateMatch) document.getElementById('lineupDate').value = dateMatch[0];
+  } else if(sel) {
+    for(const opt of sel.options) { if(opt.value===l.race||opt.text===l.race){ sel.value=opt.value; break; } }
+  }
+  const key = lineupRaceLabel()+'|'+lineupBoatClass;
+  lineupData[key] = seats;
+  lineupData[key+'|cox'] = l.cox||null;
+  buildLineup();
+  toast('Lineup loaded');
 }
 
 function setBoatClass(cls) { lineupBoatClass=cls; buildLineup(); }
@@ -1570,7 +1647,7 @@ function setBoatClass(cls) { lineupBoatClass=cls; buildLineup(); }
 function buildLineupBoard() {
   const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
   if(!bc) return;
-  const race = document.getElementById('lineupRace')?.value||'';
+  const race = lineupRaceLabel();
   const key = race+'|'+lineupBoatClass;
   if(!lineupData[key]) lineupData[key] = Array(bc.seats).fill(null);
   const seats = lineupData[key];
@@ -1621,7 +1698,7 @@ function clearLineup(key) {
 }
 
 async function saveLineup() {
-  const race = document.getElementById('lineupRace')?.value||'';
+  const race = lineupRaceLabel();
   const key = race+'|'+lineupBoatClass;
   const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
   const record = {
@@ -1633,13 +1710,17 @@ async function saveLineup() {
     created_by: CU.id,
     updated_at: new Date().toISOString()
   };
-  await supaInsert('hrc_lineups', record);
+  const saved = await supaInsert('hrc_lineups', record);
+  if(saved && saved.length) LINEUPS.unshift(saved[0]);
+  else LINEUPS.unshift({...record, id: crypto.randomUUID()});
+  renderSavedLineups();
   toast('Lineup saved');
 }
 
 function openLineupForRace(race) {
-  document.getElementById('lineupRace').value = race;
-  buildLineupBoard();
+  const sel = document.getElementById('lineupRace');
+  for(const opt of sel.options) { if(opt.text.startsWith(race.split(' — ')[0].slice(0,15))){ sel.value=opt.value; break; } }
+  onLineupRaceChange();
   go('lineup');
 }
 
