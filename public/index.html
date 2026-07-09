@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Hawk Rowing Club</title>
+<meta name="description" content="St. Joseph's Prep Summer Rowing Program — July 6 to August 11, 2026">
+<style>
+/* ── TOKENS ── */
+:root {
+  --crimson: #9E1B32;
+  --crimson-dark: #7a1426;
+  --crimson-light: rgba(158,27,50,0.08);
+  --crimson-mid: rgba(158,27,50,0.15);
+  --black: #131315;
+  --dark: #1a1a1d;
+  --dark2: #222226;
+  --dark3: #2b2b30;
+  --dark4: #35353b;
+  --border: rgba(255,255,255,0.09);
+  --border2: rgba(255,255,255,0.16);
+  --text: #f5f5f7;
+  --text2: #a8a8ae;
+  --text3: #6e6e76;
+  --white: #ffffff;
+  --green: #4a9a6a;
+  --amber: #d4922a;
+  --r: 3px;
+  --r2: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', sans-serif;
+  font-weight: 300;
+  background: var(--black);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TYPOGRAPHY ── */
+.mono { font-family: 'Courier New', monospace; }
+.sans { font-family: -apple-system, 'Helvetica Neue', sans-serif; }
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+
+/* ── NAV ── */
+#appNav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px; background: rgba(10,10,10,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: none; align-items: center;
+  justify-content: space-between;
+  padding: 0 16px; z-index: 1000;
+}
+.nav-logo {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 13px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--text);
+}
+.nav-logo span { color: var(--crimson); }
+.nav-tabs {
+  display: flex; gap: 0; overflow-x: auto;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nt {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 9px; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text3); padding: 6px 10px;
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+.nt.active, .nt:hover { color: var(--text); border-bottom-color: var(--crimson); text-shadow: 0 0 12px rgba(194,35,62,.4); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-user {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; color: var(--text2);
+  cursor: pointer;
+}
+
+/* ── ABSENCE FAB ── */
+#absenceFab {
+  position: fixed; bottom: 24px; right: 16px;
+  background: linear-gradient(135deg, #c2233e, #9E1B32); color: var(--white);
+  border: none; border-radius: 28px;
+  padding: 12px 20px;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; z-index: 900;
+  box-shadow: 0 4px 24px rgba(194,35,62,.55);
+  display: none;
+}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+  display: flex; flex-direction: column;
+  min-height: 100vh; background: var(--black);
+}
+.login-hero {
+  background: linear-gradient(160deg, #c2233e 0%, #9E1B32 45%, #5e1020 100%);
+  padding: 64px 24px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.login-hero::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 0%, rgba(255,255,255,.14), transparent 55%);
+  pointer-events: none;
+}
+.login-hero::before {
+  content: ''; position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%) rotate(-5deg);
+  width: 150%; max-width: 640px; height: 110%;
+  background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQkAAAC8CAYAAABrGFsWAAAws0lEQVR42u19fXAU553m8/aHJBAaBLJkeYQMgyyHD8kIC12iNSeOKNkElX2KSyGhNicZ9kpedi1nDWt5N2bjKMqZvYoc5dbGrBzXhQlccnFkJ0yyS9br4mYN2Oyug00CxsYYCxsjhEDYSEhInpn+3R+abvfMdPf0fEkz0vtUdVGMenpmuvt9+vf5/IBpRG9vL4GDg4PDBEkhiJ6eHqqvr6fW1lZOOBwcMwUOh4Nqa2vjXtRut5uCJEMAqKenhxMEB8dMQV1dHQGg4EJPiBwAUHd3NycIDo6Zgo6ODv0Cjwn19fURBBEkHA4OjhSCTfHnUZyfTWny/Tk4Zh2EqfqgqqoqbaE3NDTESywaWlpa+NXj4Jgp8Hq9IW5Ce3u7LTehoaEhwsVQt+AxOTg4ZgLCF7udYKPH4zElCCQpfcrBwZE+iDll6XQ6TQkiSDocHBwzISYRtAhiRn9/v+nfVq5cya8cB8dMIYkjR45EvDY4OGj5nmCq1BRlZWX8ynFwzGSSGBkZsXxPd3e35d9zcnL4lePgmCkkcfTo0YjXBgYGLN8zPDxs+fcFCxbwK8fBMYMQT3bCMrPBu0c5OGaQJZEKDA0N8SvHwTFTSMLlchm+nkgxVDR3hYODI4NIYu3atYavv/zyy3Ef88KFC/zKcXDMFASrK2ONS1jGJCoqKnhMgoMjU9DW1mZnwSaVJMDLsjk4MgM6EZi4SKKlpcXwvQ6Hg5MEB8dMQLCbk1wul+WibW5ujmmxR9k/bmUrDg6O2JFQ4FLNMvT19cGqs/NP//RPTY9hVIJ91113Rf3sV155hV89Do4MiUfYcgGiuBA8LsHBMRMtiaVLlxotbEPs27fP9DhcDp+DY2Yj5One1NRkuuCtNCLC9w0ex3Lr7Ozk5MLBkWkkAYDMWr3DZez0W9Ad0WBDmSpqwJSDgyMNECaTH7UJyypzYUAuPC7BwTFTrQnEWSyl7+mw43IkczgPt0w4OFKEFJReR3VPkmlNqJ8THADEwcGRCsSa4jRzUwxiDVFJIpGOUv3oQJ5l4eCYPrfDcCEbje5DmCJ2FCslakbFCuHB0WjamhwcHAkiGKyMqZTaygLRPdlT5XLw4cMcHFMNKzcCAJl0jVruH+2YiKNmIujSxDwPhIODIwmI1qBlogcRLUaRNGsiSAYpzZRwcMwaeL3euJ6wdtKXBnEKSmSL4XvardPg4OCIIc4QM4IxBcvNIKNACW6WsAqE8uwGB0diJBHXAlI1JxCbPkTcJGFDbp/PGOXgSAESIgqzGED45nQ6NRektrY2VdYEL/Pm4EgxScS1kGKonqTa2lryeDxkJ66BGFSr7GRJ+KXm4IgDRos13jbtKO3iRp2hSbMmjD57HSugdayATwfj4EiBNRF3SXRQADelm0mmI2K/B8Ql9IC4JKo4LwcHRxzWhLrV1dXFvLDs6EUg+ZmOiH2elCroSamCuxwcHKm0JqALPMaqYp1ggNJy09c9mJHSc3I1PS+vCXktuC8HB0cqiAK6mgO7rojd7Eci1oTRZ1SyPHpeXkO/lGtok+AMCZzyy8zBMQVEoW7Nzc22AoJWXaHxbmqHqFER1QahiPbLNfS8vIZ2S5Xc5eDgmE6iQFjRUnd3t6GlkaJYhSFJbBFL6ZdyDT0nV9N+uYZqWD63Jjg4wpCIpD5zOp1xvfHAgQPYvn071q9fr5GNw+GgpqYmOnv2LLq7u+FwOJL2I10uF128eDHidSdyoASNBj8IXxM//T1Hjx4Fj01wcCQBNguU0nLbIZbT8/Iaek6uNrQmuNvBwZHgcJ4gSTAAzOVyZfzJ8IOwRSwNeY03fXHMepJobW1NyvDdvr4+1tvbm9EnIwCCk+WgUSjWXnv22We528Exq8E8Hg81NjaGvFhfX49169Zh+fLl2LhxI4v1oG63mzZv3pz2P36HWI7VwnwEDLyKNt8JXMYnIeeK3y4cs5IkgMnmq2AQ0RJNTU1YtWoVVq1ahcbGxqiLxuv10rZt23D8+PG0/PEPi2X4nLAggiREMPTRGNr9pwzPFwfHrCMJHeIyq5ubm7F69WqUlZWZkkdnZyc99thjafXjG4Vi3CeWwgcl4m/ZEPCSchlPB85pr7lcLvT19XGi4JjVJIHa2lo6evRoUg7e2tqK5cuXY/Xq1Vi/fr32We3t7dTV1TXtP34dK8A2aSkmDEhCJYpnAu/jt8qg/vzg6NGjnCg4Zi9JAJOFR9u3b0/JB7pcLtx3330oLi7GwMAATpw4gRdeeGHaTsBzcrXl30UwfNv/Nt6i69pr9fX1OHjwICcKjtlLEiqcTif19/fP6BOwW6pEEcs2DF6q8IPwkO9kSCCTWxQcswWWdRL9/f2su7t7Rp+AN2kk6j7ZEPB9eUXIa0ePHlUHC3FwzF6SAIDt27czAKylpWVGnoBDyhCEKEmLAAh5kLBHrgp5fXh4GOBVmRyznSRU7N27lwFgTU1NM+oEnKARfEg3INokir3yapSynPA/J6UgjYMjo0lCxQsvvMAAsNbW1oz8wTUsP+K1g8oVSDZKIAIgzIWIJ6SVqGR5IX/bvHmzOrmMg2NGIeHAWzrWP1hht1SJPYHzeI0+Dnl9j1yFuRBtH0cEw1P+PrxMQyk5rxwcGWtJhOOxxx5jwUXB2tra0v4HF7Fs3CsWR7y+PzCA7BhORwCEbdJS3C8uNvpz3GriHBwzjiT02LVrl0YYHR0dafdjl7N5AIAVLC/CXfAoAzhDo1FjE3pMQEGDUISd0jIj8lQnl3NwcJIwgtpCrm49PT1oa2tDvEI1ycA8SBDA4Aeh1cAC+L7/Xct6CTOiuJ3Nwx65CuXIDflbX18fwKeVc8z2mESs8Hq9dPjwYTzxxBNqCnHKUM3m41tSOQIgZEOARxnAnsD5kH02CEX4M3Gxaam2VYxCAMNvDI4J8L4PDk4SEURw+vRpnD17FkeOHEGyekESRSGy8A/yHZq1IILhW763cAajIfs9LJZhrbAwZqIAJguvPqAb+J7/nfBWcwBAW1ub6pZxcMxckvB4PHTx4kUMDg5icHAQ//qv/4qTJ09mxA/+qXynlu4UwTACP7b4jkfst1NahmUsz7BD1I5VAQD7Ah/CowwY7tPb2xuXVgcHR9qQhJEYzUzATmkZbmfzQqwJE+0IPClVYBGbExdRqFbFGRrF9/3vGloVFRUVOHnyJCcKjrSGaeAyqAvBkqlanQ44rFwNKZwKgFDOcrFDLI/Y95v+kzhLo5DjjO9OQIGLzcU/yHdgkxAZsA1aX8SLsDgykiRUDA8Ps56enoz6UUYLUsVvlUF8BF/EYq4R8vGwWBaxf7v/FN6mkZhqKPQIgBAAYZNYgt1SJVyYG7HPvn37gLCxhBwcGUMSALB161YtjZkJqBMKDC0DFUaFUxNQsFZYaEgUj/rfxhHlatxEoR6/iGXjh/JKw88AgGBtCe8D4ciMmIQVPB4P/eM//iOeffbZtI07rGB5OEUjeNT/tuE+T0oVcLKciLqIbAh4TfkYjwfOGFoom8QS+IPWQbwQwRAA4VeBi/i5YqzX4XA44PF4QhS9ODgyhiTC0d3dTa+88sq0Kkzp8YC4BOuFmyCAYYDG8R3/6YjAYSGysEuuNHy/GnA0CmYuZ/PwiHQb5kOOO6Cp/5x+GjfsJVFRVVWF48ePc6LgyGySMIPX66UrV65gdHSyDmF8fBw5OZNt1osXL8aVK1fw5ptv4sUXX8TAwIBaoZgwalg+dkjlmICiPbV3+89FNGPp9zN62o/Aj0d8pwwzEzvEctQI+XHVUoR/jgSGUzSCfwicw3kaN9yvoaEBBw4c4GTBMbNIwgxut5v27duHgwcPpuwzwmXpsiHgiHIVTwTOhuxnVWGpEswT/rOGT/oNQhE2i6XafskgC6PvqEdTU5Pars/BMbNIIpXiutGsCRUyBNxAAP8n8GGIAvYGoQit4mJT9yEbAg4og/hR4H3Dv6tWRaKxCj0xHVSumH4eMDnGYN++fZwsODLf3Xj00UenrSzbrLxajQX8RrmkkUU1m49HpNtMrYJo5dbVbD7+u3grnCwnYRdEJbTr8OOFwEXTqk0AaG9vR1dXFycLjswjCZfLRcmKMSSCLmkFylhuhJWgmvcfwYdDypDWlLVbqkQxyzG0KuyUW28SnLhHLMYciAkHNvWE9lyg30zgRrXUVD1SDo70JonW1lZKt9SomhI1e8KrFZVv0wgOK1exlM1FnVBguXCtyq2BTzMsAJIWrzhDo9gbOI8TFgrfbrcbmzdv5mTBkd6WRENDAx04cCCtfqidzk613VuxEVtQrYp/Ui4ZtoanKl6hZkKeDpzDBZNMCAB4PB5b81o5OKY1JlFfX0+pzGDECjUbIUNIiiugWhUfwQe3/7ypO1DKcvDn4hKsYHlJJYtomRA+QIgj7UlC5y/T3r17TaeLq2pViU4LW8cKLP32cKsiGQs2/AlvVetQjlxskUqTShYA8C/KZctMCNew4Eh7krBCT08P/frXv0Yy3JOHxTLUCPl4TfkYrykfWxJGCcvBA0l8uuvJwmOiTqW3LFqE0qS5IWpq9zeBAdMy7+C5VvtwODjSnyTcbjdt3rw56cfdK6+GAxKAyaaqszSKMzSK95QxU9J4QFyCPxIWJiUjkQ0BewLnLdOWKgqRhfvFxagW8m3FQey6Pr8I9IfUgYTD6/XynhCO9CaJVA4iLmU5eEJaqdU7qMFItX9zGH5cogn4oOACjWOIPsE1+PEh3cAaIR91QkFM8zeMFuoP/e/ZcnvCraDPCQsggCWtJ8QqbcorNznSmiTa29upq6srZcdfzubhb6XbkQ3B8Omsl81X54AKQNLiBP+mfGQZULTC/eJi1As3JRxc1cdJfuh/zzRVy1OmHGnrbjgcDkq1WvZuqTJpFZCxLtB23yn0YSzuY2wRS7FeuAkOSAl9fzvBTZ4F4UhLkggi5eIqagVkLsSkBSjtLEyrDtJYv/+XxCIsgJwQWdhJ1XKrgiPtSKK3t5c2btw4JZ+1SXCiTiiAk+VAAZISKIxGFBNQ8D/9ZywrJO2iUSjGV8RiLIAcN9npXRAzMR7eks6RbpbElA8cLkQW6oWbcIfgwCI2R8uEpMrKyIaAl5TLeDpwLinH2yAU4WuiM2GyCIDws8AF0ywMz4BwpA1JAMkNZBYiC3eLN+MPyjCO0TVb73FhLv6LWIAvC0Up+X1qHcM3fK8n7Zh6sphIUPLfSIErSODqQGgOThLTj46ODkrWkOFKlqdlN87QKC7RBD6kG7gBBf00jrkQcQvLxhwmwokclLAc087PZLkegzSBv/CfSPqx9W7IRJyDhAIguAPnDWsruPvBkVYXP9nCNGpzFQBt+aj1Eor276S5nuqA5hB9khKSULFFLMWXhaK4VbLMlLsAPkSIk0SaIdmTw1yYiz8RS7BamG+7wzMVyIaAx/1nTAVvk02M8cQrZAimwsHper9wzEKS0CHpK3mT4MQdggO3sBwsgBzx91SnSCegoMX3RspP3HI2Dw+KrrhqRGxkZThRcJJIHzQ3N1NwulXKUIgs7akZPic0loVlx2URwTCGAL7jO51QoVUspHiveEtcLogIhqf8fWY1FZwoOEnMXPfDCOXIxf3SYkOZOzuL6Q3lGnKZaKujVCWU5wP9lh2bySTBb0u341Y2J2arIhsCngm8b9YsxomCk0R6oampiRId/lPCcvDHQiFuUAAAsIjNwVI2F06WY7q47TyFZQh4NvA+3lau40/EElRrwVJzwrCrXZksbBFL0SgUJ40oXC4X+vr6OFFwkkgveL1eWr9+fULHqGR5aBFLURHUvAwnB1Fr+JrsHD1Do3CynJBJ5GaL6eeBC5p1sEUsRQ3Lt6zwVCsg+2kcLyqXbbWXJ4JqNh/bpTLTxjcrEvx7g85W3knKSSJt0dPTQ1u3bk2Kz64PZPpBGKQJfAwfztAo9gTOo1Eoxn1iqS03xCiNqFZ4Vgv5cLG5kMA00tBDCgYMX1M+hle5YrsQLB7skauQBynmOEWb70RE1oML2XCSSGu0tbXRrl27Unb8dawAD0qumBaT6kb8XeCMoYxdNZuPcpaLRWwOFjIZ8yBpVoofhAkoOEdjOBAYTGlwM3zCmZ3Yi0VBGCcJThLpjWTL+NewfPyxUBj3rE+7QrXTjVgtCrNJZrzVnJPErCELdTSg+lRP1si+Q8pQ0hq8ko298mpka3Wo9n7TNv/JCCupt7cXGzdu5ETBSWLmuyGFyMI2aWlKBHJPBYf/WOlPTjWq2Xx8SyqPye14h66btZpzkuAkkVlIpA29kuWhVVyMW9mcpJMFAHxAN3CaruNDGsd7NGqpOVGILCwJpmoXsRz8ItCfsJiNHveLi9EgFNl2rUQwfNd/OuI7c9EaThIZi0SUuWtYPu4Vi7GC5SVVrCY81apiGH7t77k6Qd5sCLgKH/6X/72U9H/EGsgEgO/7343IwnAdCk4SGQ2v10vbtm0zHRIUzQ25V7wFVcyRNHUr0eL06wV6p6KOYoNQhD8TF8Nv8HvMfqMMAf9sEMjk7eWcJGYEEglyqsI2K1gebmVzkA0hovU82kIbQwAvBga1VKgcFjw8R2P4kMbxqnI1qa6FFXaI5chlYggJZENAHpOQp0vV6us8BDDcQAAvK0OGQrv19fW48847kZeXh6KiSVGfgoIC3HTTTdzi4CSRGUiGhkUhsvBHwkIsZDIKkKUt+vCswc0sO8SKmIBiurjSFRuEIsyHhDKWi9uEXCyADAWf6nR8QDfwBl2LSRksGD/iKlicJNIbHo+HHnroIfT19aXk+GYdpmow8wyN4hSNWE4a02MdK8BnhHmoYHlwspyo081ThVKWgw3CzZobprorqtXxEXy4SOO4Sj4t3qLCBwUDNBGS7eGl3pwkMgItLS20d+/ehI7hwlzcITjwWSEft7N5hi6HOl3MByVi0tgoAhiiT7SMQzYESGAoYFmaheLXqWqpOpovK0P4VeDilLko4cT1ddEZoWMRHnvRuy0CoJWj6wvPOjo60NHRwe9PThLpjXhTqOtYAb4kFuJ2Ni9kQagQMJnFOKJcxTD5sEksMUw/hi8uO3oVEhiyIeAyPsER5SoOK0N4i65PuUvy38RF2m8fQwB5kDRlsP5gIZY+vayS3I/874dYUjxbwkkiI5BICnU5m4dVzBHy2jHlGs5gVPv/FrEU9wjFcWdLVHKYgII/KMM4olydkvbzDUIRVrI83CE4UIgszQLqp3Fchx9lLFfb91eBi7gGP+5k83GH4MDXfcdQzeajTXKFlIYbNcnxbAknCR63wKcTxlUtTjtdp/pKzhcDl6eEGKy+/xohXyOBbAghRWjZEOBRBrS4STWbrwU2w3tIZAi4Bh92+8+F1IR4PB40Njbye5aTRGaQRSrVsjYJTnxVdJpaFaob8m/KR/hJ4Py0xB/suFx3izejnOWGxFX0RKGP33TJKyJ0PSQw7AmcD6kP4T0inCQyCqkYU2jVS6GSg1e5krYNY+FoFIrxJ2IJZAhQQBhDwFAMeB0rwF9KSw1drq/7jvH7dhoh8FMQP4JPNNbT05O0Y26XygwJIhsC3qHr+KrvdxlDEADgUQbwdd8xHFQuIwCCAxJKWE6E5fQBDeFB/wkM0gSyIUAEs6xI5eCWREaioaGBDhw4EPf7jWop1Anl4f75TMLf42b8JS4xVR1d1fPIZzL+n3LFqGuW37ccme2CYHJmSExbDcun/XINPSdXa9t+uYZ2SsviOl4mbQ+IS2jn4v9EkEFd0goqR67l/t3d3ZSp94fb7c64787djRS5IBUVFTG9716xOKS5ShXWNdFtmFF4OnAOfzj/IXYo5TiiXA1JDwOTVZidnZ1oamqadMmSOApyqh8gb7755rR+h87OTuKrNM3cDztP0kJkhVgQz8traB0rmJFWg8vlsr2fx+OJuKGDVkRGWhNOp5Nqa2tpur8Dj0mkGezMC1HbtCeC5dkWk7NmTBzM6/XS6dOnMTg4CEVRMDo6aT2UlZXZUd+muro6HDp0KGPu37BM2HR+b4r187m7kWK88MILrLa21nKflUGpvFlAEKiqqqLg/BS2detWtmrVKgiCgLy8POTl5eHkyZN2LDQMDw9nmhs67d8hk2M5swWmpvVOaRntl2tok+Cc8UFK/VZbW0vBQG+IK9HR0RFyM7e3t5PD4SC9G9fe3p4xN3xra2v4b58W6Fw9jnRET0+P6WLpklbQDrF8VhGEfquoqNBu3GD0n5qamqi3t5f0C0xHKBlzo6vElw4kkQafzxGvNTEbCKIQWVTD8mmDUESNQjE1CsW0jhVQCcvR9mlrayP90zdoPWj/ejweqqqqirA00hXBwGtakERzc3Pcn88Dl1OIjo4O6ujoiHi9EFlp2X+RCNQOUXUgsx7ZEDABRVMMfyNwDq+GmudYvnw55s6di7Nnz6KrqwtOpxPZ2dn4whe+gGeffZZlAkFY9PdMx/enoMvBBz1nkF8647ZGoZi6pBW0X66h/XINPS+v0Tb1/zulZbRBKAp5X3h8obOzk6qqqjK2iMrExdDiMFP9fYKfSQAoaFFwpEsMoqWlJWWme7oQwzpWQDulZSFEoK/32C/X0G6pkhqFYtNj6IOS4fB6vWptRUagqanJ8nxNdTGTGuNJhGi52WGA9vZ2+ulPf4r+/n7L/VwuF4aGhqY0HbdTWoZ9gQ+nXG0q3D36mujEZ4UFcEAyHF6UDQEf0A28ELgYS0o3Y+/HYFrXzn5TrbRFYW5QzJocnCRsxAzSBVvEUjQKxXjAfwIXDCaWWy3qu8WbcSQQWfJsF+XIxXrxphDBW6NuVRkCrsOP/xu4ENc4w0yUq4uxsW/aCCLez+ckEd+FnnI8IC7BF4VCfAQftviOx/VeYFJe7n0awxkaxVXy4UO6gQ/ohhY4VUcKlrG5KGBZKGE5WMTmaBYDAFOtCwkMLymXE25lzxTFbDvVtHpUVVXh+PHjbBoJgpNEik5qQihHbtxPb3XRPiLdhvKgXuQBg4lZ0d6/S66MWNBA5IhBPfQDeKLpbqpyczt9Zyx/6zpWEFM1aWtra9plMjweD/3gBz/AoUOH4olT2Sk5T9m9HO9sE04SkxePtm7dGvJao1CMLwmFGEUAPigYpYDlQN2FTAYAzIOkTbx6Q7mGHwXejyu9WYgs3CeW4nPCAu21EfhjtiLM5n0kC0bCtXqUshy0CKWoEfIBAKdoBD/0vxfzOenu7sb27dun5X71er30s5/9DHYmvqmCwCa/j6WawKLIKsb1+RKnCGBgIHLGZgXLQzHL+XScHWOmI/wk3bn3gxLSntwkOPFHwsIIuflr8OER36mYjtUoTA46tjstPBaIYBhDAE/4z5qK4ewQy1Ej5MMP0r7D7WwenpFX4VXlakznKNgeTgDQ0tKCz3/+8ymbYO7xeOjIkSPo6uoCANgJSKpu3Roh35DIg4rfKbuHW1tbLQmitrYWR48ejcul4pYEjAOWO8RyrBbmIxBsvOqjMThZTsikbwBaUdA5GsNJZSQmc1odD1jOcrWiI/0gYtXPf035GI8HzsT0m4zEZZNpPVh9pxqWjwclF+ZBMlX91it9J5qtcTgc+MpXvoLbbrsNRUVFuOWWW+BwOEwDoF6vl65cuYLz589jeHgYJ06cwEsvvRR3lmqLWIovC0VwQMJPAufxc6V/yqwIu6LM8QSEm5ubqb6+nrsbQVM2Yh7o/eJifFkogg8KxhCIeDrEUyWpViHezLI1wgn3/fWTvE7RCPb4z8cV0wiXqU+W9RAAYbf/nCkZqhkYu9aLShYf0A0cVK6kdHJ6svGAuAR1QkFUkd/gU5wlmxzsjneIZ26JbqA24yQB89Tnc3I1RDAM0gT+wn8i5uOuYwVYKyxECcvRSpPDMwThQcR+Gsdr9HFCcz13S5UoYtlJJYhsCDhFI5ZKWQ+LZVgrLIzLvZmuAUOxoobl415x0o0LnysSLv+fCivCKH5mAzF9vpq1Ua2PWU8SViddlXkXAGzzvYk+jNk2P78gFCIXYogknQqVEPzBkXeXaAInaSThp2gpy0GntEwbqXcDgZB4SbhFYAdq3cP/9n9guWjV+EMy4h/hhPE6XYur5iJZWMcKUCPk4w7BYVg8JoKhn8bxTX+kFkZbWxt27dqV0DrzeDz0zDPPxBXTiHVOidPppP7+ftTX1+PgwYMsZX5ShsFytZQjFw9KLpykkaipR3WRLoAc8vooArhGPnwMHy7QOIboE7xCV3E+hoIoO0HKLWIpgMlJ3vsDA/iSUIgClhVyMwOTQ31WCnmYGxZfCV+oAhhetchcqHhSqsAiNsfW1LF4CQMAPgjWdLxJIykljeVsHj4nLEA5y9XmufqjjGBs851IWkbD6/XS4cOH8Ytf/MKWCI8Z2tvb0dXVxex+ZliAlqU0mDKTSCKWp3i7eBsu0QT6MY6r5NNch1SikuXhz8UlmMNEvKmMwKtcwTG6hielCs3FUZ/Kh5QhHFKGsF0qM41X6IOl0dK3lSwP7dJtmAsxZSnW8O+m/h6VDC/SuFYUdgNKRHGYGdSiMSfLwRwIKGO5WqxIAgsJIEdzw37of8/Myoq6vlRx3BdffDGu7INFTMF2jUl7ezupmRwj62NWk4SRq7FJcOIiTWSEhFwJy4ETORFE1CWt0IqvztAojihX4VEGtMHEPpMJ5gIYjikfY69yPqqVs0lw4mtiSUqsh3iIQ9D+DcUElBArYC7EEBdM0f61VzgWThBmcQiHw4Hh4WHt36lELC6Ow+Eg/fdraWnB3r17WUoCKpmItrY22rVrV0hQaodUrv1ffVKdoxs4rVzPCOJ4QFyCfMghMY5y5GKbtBROlhMSM9D7/oeUIdvl1DulZSmrv8gUZEPAM4H3pzVWYgS3222rfqS+vp4OHjxoRGwsYX9pJiH8RDUKxbhPLNWejjIECMEbAgAGMIF3lVH8ItCfUKn1VJPGF4VC7WmqEoMfhHfoOg4rV23f6Opcz1gCnzMN6m//vv9dbSp6OsDpdKK/v59Fizs8+uijVm6N4ftndcXl0FCkZaCaqzIE/LMyiEs0gT8ow7YzG+mCdawAm6VSLIAMJejHj8CPN5WRmAN/+v6RCSizkiD0xV/pNjApWk+I6lZHqRxlMf9hNqCqqoqOHz8e4uP/vVShLQKDadZpDzUbU85ycRU+vE9j+IMyjMN0Nab2cv3xuuQVUaP7+viAUdo1U10TlRw+gg9u//m0cTmdTid27txp6lp0d3fTj3/8Y7vZERb3H2cbSQChBUGZRhJqRecZGsWrytWk6Waq9SJmQUpVs3KIPsEFGsfrdA0naVgLfhYiCz+QV05ZFiSZ5NBP4/iNcimtYg8ulwvf+c53MD4+jsHBQYyMjOD1119HeIzBJljCO8xk1NbWkpF/tlNahtVsPp4M9KVdYGq6UMny8DdSObIhhFSLTkDBj/zvR33ClrAcPCQu1VyWdCeId+h6XN2qmQI7MYxwF3xWYu3atYavP+p/G08G+jBGAc4OQZygEXzD9zr6aVwL5AZAeMR/Ci/TECoqKrSBvsBknt7r9cLtdqOpqQkXaBzt/lPYEzgPOc1vuwAIt7N5+LZ0OzYIRTPuWnZ2dtomiFlvSQTB1YNjhJox8SgD2BM4r1eSIuDTNJzH46GXXnoJ165dw8GDBzXN0HWsAA9Kril3PdSYid3PVV2OYfjx78pH+JfA5YzJapm413EpY816ktB1u3HEgOVsHq7QJ6o5ztQIulrpF62FuYbl46+l22wvWD8IcyDGXbyluhDn6AZqhQVYANlSjs+MMEYRwCllJCm9NlOFiooKPPXUU3Frh856kqioqKDwCPDDYpmmJaHeILkQNTO7j8bwonI5JTeJw+HA2rVrsXTpUgDAsWPHklqum2yo1X2686jdU2odypNSBQDgEk3gLI3iGvz4rTKISpaHv5Vut7VA31Cu4SyNYpNYYivTYgQZAn4SrJCsZHmoEwqwkuWZduhafR+1SW8YflyiCZyjMQzRJ/g9DU+rkrkeHR0d6OjoSHiNc3fDwN0Il3zLhqA9Qf5FuZzyfgyjvHd4fX26IOhqAACam5uxb98+pv++JSwH3dJKQ13NfhqHH4SbWbYtoviq73daj8ytbE5cAVCzSkk1M3Qrm4NFbA4ERJZsGxGIUdpXX3z3O+Vj7FcG4ko/Gy361atX4/e//z3effddjI5Ouj633HILbrrpJjgcDqxevTrpauOcJAxIQq9KJUPAs9NQfmvmP7rdbvrmN7+Z9H4Afc1+d3c3PfXUU7YETXTfC5s3b2bh3YTVbD7aJJdhQ1kslZsiGP5N+UjrSN0gFOFrohMLIMdMFnZKql2YizsEBxYyGQXIwkIma/qlom7ZBEAYIT8moMAHRWs2+3fl45QU4MUjIMNJIgUksY4VYJu0FBNQkA0Brb7fT1sqzKjhBkhMY8DuZwSfXpazSAxmS1JdXR0+//nP4z/+4z+075eMfg8RDN/2vx1izm8SnLhHLNa0O+ySTjYE/DxwwUxqLiPiDI8//njMg3Y4SSSJJFRrQlV4TodGHquFnKzga11dHR588EFDkRKv10svv/wyzp49i6GhIZSUlOCuu+4Kqfirqqqihx56SHvN7XbTwYMHsW/fPgCfyr1lQ7Ddih1OEmaK4Y1CMeqFm0IEhO0QRTz6oemGWHQjOEkkkSTUm/qLQiGG4TfULpzGGIDhdevs7CQroRKn04na2lqsWrUKt956K8bHx3Hs2DFDqfi2tjY0NTXZ8m/VTIbqcrjdbtq8ebPp/tVsPu4QHChnubiF5WgiPUoU/18lij4aQ7vfWDm8kuXhvwrFWCHk2bIuZAgYoHF8x396yq3FqqoqlJWVIZYBP3YeJvfcc09MalScJBIgCb1vmswy53T0Tc2qTysqKvDwww/HJF8fjw5jDctHGZuLRWwObmbZyIWIIpYd0QeiYLIC8AyNmhKF3m1cKyzEZ4R5lhPI1BjDPymXEtIWjQdqdihVqXin04lvfOMbyMvLQ1HRp4Vhg4ODUBQFFy5cwIULF6Y8zpFRiDYF2mzbJDhph1hO5cid1qneXq835lyg1+sldXM6ndTW1ka66d2GW0dHh+Xk797eXmpvb1cnhCd9ino1m081LJ8ahWLaJDhpi1hK61iB7WNUs/n0gLiEuqQV9JxcTfvlGvpl2BR0dQL6cjZvSq9hbW0t6Ql2Kj87ninjs9masEUMO6VltF+uoT1yFRUia1oJQrfZJoeGhoZoN2vE5vF4KPw4bW1t6fLb49pqWD5tEUtpp7SMdkuVtF+u0bbfyp+lHWL5dFzf8FhDyj7LivQ5DNDb22t6MhuFYtopLaNfht1A6XTDB7+/odlv9puDN4nlVlVVFWKp2HlPJm/lyKVGoZi2iKW0QyynJ6UKahSKp/Q7uN1u02tpRfB2tubm5rgsT+6HhPrfIdWXatpOH/z6WeBC2pXj6ouvgnUKLDzm0t7ejoaGBstApL4GI1xI1WiAUbJQynLw5+ISyBC0ysUbUNBP4zhHYzO2EzOe4LTemjt9+jQGBgZw4cIFXL16FQCwcOFC5OfnIzc3F8XFxfjMZz6TcHEVJwndUzK8HkA/jUoEg1e5YlsHcqqgnxStVjmGl+M2NDSQWq/gcrnw4x//2PLGqauro0OHDoWoJocLpqYCajbJDOpoAv1sUbNejnmQ8AHdwAuBixmnKqYjgqRXT8YDgdPDJBwOR8RrewLnMYqAFv1eyfKiHqeE5aA02AuQang8npBR8mrZdkdHB/TBsAMHDrDu7m4AQF9fH9avX4/m5mbSWxCqSVpfX09/9Vd/Nfn79+zRgrtTofj8dOAcWn2/x2vKx8F0KDRCmIACCQwFLAtOlgMXmwsXm4vb2TzDzcly8DlhAX4or8STUgUaheKMuyfDr9N0gVsSkQHMENSwfDwslWmiuC8pl02tiUahGGuFhVFTc4nCSDI9XPlbJb5w9WOz9KSuUxAVFRX44IMPplwKPhxbxFLUsPyIQcqxIhHx3zSKmyW19oGTRBJJQm8Kfyb4hNoX+DAiLqFWaD7oP5HUyVzhUGMFagBKZ46S3eusFj9VVVVh69atKCgo0G5Au1OqpxKFyMLd4s1YEWzA0ldsqohVI8IPQh+N4QyNJjQuoRBZyGECipGjDfpZxOZgIZOTLpgbrx4EJ4kUxyWiYTmbh0ek21CMbKux80l1MYL1+gRonZeW72loaMDSpUuxa9cu/ROJ6urqcOjQoYh7QG3xbm1txdGjRxMaNWcH94uLY1qoJSwHa1g+FrEclLAcyBBwE8uKeYp6eAenH4RBmgAAHFKGbF3LHWK5pomq7xqVwAx7Q4ILPaHzNdVNXjwmEUoSMZ34LWIpHpeWYwFkvEHXot5U61hBwt/xk08+gT7lGY0ggjEJ7Nq1Cw0NDdi4caMag8Add9xhuL86KPbuu+/GyZMntXhGqnBauY6/kW7DbqkS94uLUY5cy/0v0Dg8ygCeDpzDo/630e4/hS2+4+ijsZAOTSuMIaBZIGrMIwBCEctGEctGnWDvWj0eOIODyhUAk0FUX/A4E1Bwj2gaB2GxPozCrycMUtTckpg63482btwY9Un21zpNgzEEDJuO9FDTfImaoPX19WhuboZVb0SUa012rn8wxhE17pEs6NPNqoT9u8ooztIo3qQRnKARW6b/LrnSlgXxT8olrGB5cLG5htZHrBO6NglObBJLIiakvaFci2gg07sNbrebvvvd78bUlm+E7u5ubN++nXGSmCJEqwkIvyH8IDzkO2mZz98tVeI4DUedTG4HtbW1sapVGdZNxNs5mKo+g5/Kd4b0augVoIDJqeLX4dcms9+AEhEb0rf5W5GEunh3S5UoYtmG/RyDNIG/8J+w/f2r2Xxsl8pCFMXNyMZIrbqzs5Mee+yxhM5hRUUF2traLIf1cJJIEgxGsYfgSakCi9gc+II1FCPw4/v+dw2ly7aIpfia4MQj/lOWT8RSlpO0oKfZ8BbdrJGEr31zczPZcXfsoobl41tSuWntg96VEMCggPBV3+9sPdXDj/MOXdesOv21DLcmVLHfWKAGsfVFeG2+ExEPEQMtDg1ut5teeeUVJELG+hoaThIphBW7qyay2pmYDQG/UgZCrIVKlofvScvwEXxRXZKHxTLcyubge/534q4yjFaAU1tbSzt37kxqkU4y3ZBGoRhbxNKIBf6E/ywekpZGPKXNpnrrC+GMMAElpP3fTBRHBEO771TMBVk1LB9bxFI4WQ78IFMdDLMhvWau8FtvvQVFUTA6OoqBgQEwxnDzzTdrXZ7JtCA4ScQG0+CQ2ko+BwIu0kREhH6PXIX5kPGqclWTXrNySdT26GH4cSBwKaZsiS7zYbUPpUrNKBnmsuoyPCi5tMBiNgR8z/8OBjCBv5OWa5PAxOCErW/6jbMvVkQhgmGb/2SI5abur7cArIRu7MYq7hVvQTaEaO3tabsWeXbDBurq6kz/1ocxeJQB/FzpjyCIHWI55kOGAsIw/JafUcJyUMCyEADBH1wYatTcbuDKzuJPpdxZ0LRlvb29qKioiPs4L9MQvu1/WyuHVwAsYnNwgcbR4nsDfTSmWRSL2BzTrNGewHnsCZzXhGlDb3yGu9jCiP2/7X8bI/BrA4QCIORBQpe0wvI7u1wuOJ3OiNd/rvTj675jeEm5jHKWi53SspgfRJwkMgBGtQR2niA1Qr6WEmsQirBTWoZGodiwRPg/s4XIhqDN1fwfMbgcqYxsx4ONGzeykydPMgCss7MzrmO8RdfxDd/reEO5BgHAZ4NSggDQ7j+FA8ogZAhQQGgSbzG3nJQBPO4/ExHTUECo1h1TxQkawRbfcbyqXEU2BE2st4zlYodYbv6w6OtDf3+/6e99OnAOX/G9hgs0bnWciLZ8jgxC8OLZ3taxAnpeXqNtz8nV9Mtgq/lOaVnE/veLi+lhsYw2Cc6Ui85MF+LVR1jHCmiPXBUhBuPCXNojV9Fv5c/aaul+Uqqg/XKNJjLzvLyGSliO6f4u3Xuel9fQfrmGHhbLTPevqKggfZzG6ru4MNf0b52dnZwoMhlOpzMmRaUdYjntkatoj1xFO6VlSdMnsNKKyAR0d3dTVVVVTL+5kuUZvr5FLKXn5Gpbx3hAXKIRxfPyGnpAXBJt0dM6VhAiTGNFFEFyCInTxHN96+vrOVFkMrxeL7W3t5sqOSVza25uppaWFuro6DAVJJkJ5zNRQZtCZNEGoShCaSvYRRmhSvVT+U76ZZAsLI6L1tZW7f8bhCLaLVXSb+XPUpe0IibhGLfbHa+0H8cMQtIJYrb6px6Phzo6OrQnebxbUL80ZKHrtx1ieTSlMUNroJrNp53SMksJQ6trF6t1kelWI4fuaRjjzctNzRjgdrupo6NDPTcxm+xmArPVbD7tlVdHWCHhT3GjmFQhsmiT4DSNL9iJF7ndbjIjMZiI5XJkOKx0CPXKxF6vN+JJGbxZOGIk556eHuro6KDm5majOIcti88oVmTkNsSqMxmPNdjb20udnZ3U1tZGTU1N1NTURA0NDZQOAjQcHLMCds398CBkPFYjLMRtOTg40hxGQU39Fgw0miKWGRlcwp6DI4MRJSYQFXbJgseaODgyHD09PRReBxNLZiHa8CPwtCYHx8xBb28vtbW1qaQRMzweD7W0tMyIOAXvAuXgmAJ4vV564403MDw8jMOHD+PgwYMw0xhNN/x/wX76wY4yCgMAAAAASUVORK5CYII=') no-repeat center/contain;
+  opacity: .22; pointer-events: none;
+}
+.login-hero > * { position: relative; z-index: 1; }
+.login-program {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 500;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255,255,255,.6); margin-bottom: 20px;
+}
+.login-title {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 38px; font-weight: 400;
+  color: #ffffff; line-height: 1.15;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 16px rgba(0,0,0,.35);
+}
+.login-dates {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: rgba(255,255,255,.7);
+  letter-spacing: .05em;
+}
+.login-body { padding: 32px 24px; flex: 1; max-width: 420px; margin: 0 auto; width: 100%; }
+.login-tagline {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 13px; color: var(--text2);
+  text-align: center; margin-bottom: 32px;
+  line-height: 1.6; 
+}
+.pr-label {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 6px; display: block;
+}
+.pr-input {
+  width: 100%; background: var(--dark2);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  color: var(--text); padding: 12px 14px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200; font-size: 15px;
+  outline: none; margin-bottom: 14px;
+  transition: border-color .2s;
+}
+.pr-input:focus { border-color: var(--crimson); }
+.pr-btn {
+  width: 100%; background: linear-gradient(135deg, #c2233e, #9E1B32);
+  color: var(--white); border: none;
+  border-radius: var(--r); padding: 14px;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; margin-top: 4px;
+  transition: background .2s;
+}
+.pr-btn:hover { background: var(--crimson-dark); }
+.pr-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0;
+}
+.pr-divider-line { flex: 1; height: 1px; background: var(--border); }
+.pr-divider span {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; color: var(--text3);
+}
+.pr-link {
+  text-align: center;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: var(--text3); margin-top: 16px;
+}
+.pr-link a { color: var(--crimson); cursor: pointer; }
+.pr-err {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: #e05c5c;
+  margin-bottom: 10px; display: none;
+}
+.pr-tabs { display: flex; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.pr-tab {
+  flex: 1; padding: 10px; text-align: center;
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text3); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .2s;
+}
+.pr-tab.active { color: var(--crimson); border-bottom-color: var(--crimson); }
+
+/* ── APP SHELL ── */
+#appShell { display: none; padding-top: 52px; }
+
+/* ── SECTION LAYOUT ── */
+.scr { display: none; padding-bottom: 80px; }
+.scr.active { display: block; }
+.scr-hd {
+  padding: 28px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+}
+.scr-title {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 22px; font-weight: normal; color: var(--text);
+}
+.scr-sub {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: var(--text3);
+  margin-top: 4px; letter-spacing: .03em;
+}
+.section { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+.section-label {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: var(--crimson); margin-bottom: 12px;
+}
+
+/* ── CARDS ── */
+.card {
+  background: linear-gradient(180deg, var(--dark3), var(--dark2));
+  border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 16px;
+  margin-bottom: 10px;
+}
+.card-title {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 15px; color: var(--text); margin-bottom: 4px;
+}
+.card-sub {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: var(--text3);
+}
+
+/* ── HOME SCREEN ── */
+.home-hero {
+  background: linear-gradient(160deg, #c2233e 0%, #9E1B32 45%, #5e1020 100%);
+  padding: 40px 16px 32px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.home-hero::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 80% 0%, rgba(255,255,255,.12), transparent 55%);
+  pointer-events: none;
+}
+.home-hero::before {
+  content: ''; position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%) rotate(-5deg);
+  width: 140%; max-width: 560px; height: 105%;
+  background: url('data:image/png;base64,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') no-repeat center/contain;
+  opacity: .2; pointer-events: none;
+}
+.home-hero > * { position: relative; z-index: 1; }
+.home-eyebrow {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 500;
+  letter-spacing: .25em; text-transform: uppercase;
+  color: rgba(255,255,255,.6); margin-bottom: 16px;
+}
+.home-headline {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 28px; font-weight: 400; line-height: 1.2;
+  color: #ffffff; margin-bottom: 16px;
+  text-shadow: 0 2px 16px rgba(0,0,0,.35);
+}
+.home-pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.home-pill {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 500;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 20px; padding: 4px 12px;
+}
+.home-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border-top: 1px solid var(--border);
+}
+.home-stat {
+  background: var(--dark); padding: 16px 8px;
+  text-align: center;
+}
+.home-stat-val {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 26px; color: var(--text);
+}
+.home-stat { position: relative; }
+.home-stat::before {
+  content: ''; position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 24px; height: 2px; background: var(--crimson);
+}
+.home-stat-lbl {
+  font-family: -apple-system, sans-serif;
+  font-size: 8px; font-weight: 500;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: var(--text3); margin-top: 4px;
+}
+.quick-links {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; padding: 16px;
+}
+.ql {
+  background: linear-gradient(180deg, var(--dark3), var(--dark2));
+  border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 16px;
+  cursor: pointer;
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+}
+.ql:hover {
+  border-color: var(--crimson);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(158,27,50,.25);
+}
+.ql-label {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: var(--crimson); margin-bottom: 6px;
+}
+.ql-title {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 14px; color: var(--text);
+}
+
+/* ── WEATHER STRIP ── */
+.weather-strip {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--dark2);
+  border-bottom: 1px solid var(--border);
+}
+.weather-temp {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 28px; color: var(--text);
+}
+.weather-info {
+  flex: 1;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: var(--text2);
+}
+.weather-safe {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px;
+}
+.safe-green { background: rgba(74,154,106,.15); color: var(--green); }
+.safe-amber { background: rgba(212,146,42,.15); color: var(--amber); }
+.safe-red { background: rgba(224,92,92,.15); color: #e05c5c; }
+
+/* ── SCHEDULE ── */
+.sess-card {
+  background: linear-gradient(180deg, var(--dark3), var(--dark2));
+  border: 1px solid var(--border);
+  border-radius: var(--r2); margin: 0 16px 10px;
+  overflow: hidden;
+}
+.sess-hd {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.sess-time-block { text-align: center; min-width: 48px; }
+.sess-time {
+  font-family: 'Courier New', monospace;
+  font-size: 16px; color: var(--text);
+}
+.sess-ampm {
+  font-family: -apple-system, sans-serif;
+  font-size: 8px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .1em;
+}
+.sess-div { width: 1px; background: var(--border); align-self: stretch; }
+.sess-info { flex: 1; }
+.sess-name {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 14px; color: var(--text); margin-bottom: 3px;
+}
+.sess-meta {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; color: var(--text3);
+}
+.sess-type {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 10px;
+}
+.type-ut2 { background: rgba(74,154,106,.12); color: var(--green); }
+.type-ut1 { background: rgba(74,154,106,.2); color: var(--green); }
+.type-at { background: rgba(212,146,42,.15); color: var(--amber); }
+.type-tech { background: rgba(74,120,200,.15); color: #6a9de0; }
+.type-mixed { background: rgba(158,27,50,.12); color: #c06070; }
+
+/* ── ROSTER ── */
+.athlete-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .15s;
+}
+.athlete-card:hover { background: var(--dark2); }
+.athlete-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: var(--white); flex-shrink: 0;
+}
+.athlete-info { flex: 1; }
+.athlete-name {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 14px; color: var(--text);
+}
+.athlete-meta {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; color: var(--text3); margin-top: 2px;
+}
+.athlete-stats {
+  display: flex; gap: 16px; text-align: right;
+}
+.athlete-stat-val {
+  font-family: 'Courier New', monospace;
+  font-size: 13px; color: var(--text2);
+}
+.athlete-stat-lbl {
+  font-family: -apple-system, sans-serif;
+  font-size: 8px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+
+/* ── FILTER STRIP ── */
+.filter-strip {
+  display: flex; gap: 6px; padding: 12px 16px;
+  overflow-x: auto; scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+.filter-strip::-webkit-scrollbar { display: none; }
+.fpill {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .05em; white-space: nowrap;
+  padding: 5px 12px; border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--text3); cursor: pointer;
+  transition: all .15s;
+}
+.fpill.active, .fpill:hover {
+  background: var(--crimson); color: var(--white);
+  border-color: var(--crimson);
+}
+
+/* ── LINEUP BUILDER ── */
+.boat-diagram {
+  background: var(--dark2); border: 1px solid var(--border);
+  border-radius: var(--r2); margin: 0 16px 16px;
+  overflow: hidden;
+}
+.boat-hd {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.boat-label {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: var(--crimson);
+}
+.seat-row {
+  display: flex; align-items: center;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.seat-num {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: var(--text3);
+  min-width: 20px; text-align: right;
+}
+.seat-slot {
+  flex: 1; background: var(--dark3);
+  border: 1px dashed var(--border2);
+  border-radius: var(--r); padding: 8px 12px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 13px; color: var(--text2);
+  cursor: pointer; min-height: 36px;
+  transition: border-color .2s;
+}
+.seat-slot.filled {
+  background: var(--crimson-light);
+  border-color: var(--crimson); color: var(--text);
+  border-style: solid;
+}
+.seat-slot:hover { border-color: var(--crimson); }
+.seat-side {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; color: var(--text3);
+  min-width: 30px; text-align: center;
+}
+
+/* ── COACH HUB ── */
+.coach-athlete-row {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .15s;
+}
+.coach-athlete-row:hover { background: var(--dark2); }
+.cah-name {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 14px; color: var(--text); margin-bottom: 6px;
+}
+.cah-bars { display: flex; gap: 6px; align-items: center; }
+.cah-bar-wrap { flex: 1; }
+.cah-bar-lbl {
+  font-family: -apple-system, sans-serif;
+  font-size: 8px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 3px;
+}
+.cah-bar-bg {
+  height: 3px; background: var(--dark4);
+  border-radius: 2px; overflow: hidden;
+}
+.cah-bar-fill { height: 100%; background: var(--crimson); border-radius: 2px; }
+.cah-stat {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: var(--text2);
+  min-width: 44px; text-align: right;
+}
+
+/* ── PARENT PORTAL ── */
+.announcement-card {
+  background: var(--dark2); border: 1px solid var(--border);
+  border-left: 3px solid var(--crimson);
+  border-radius: var(--r2); padding: 14px 16px;
+  margin: 0 16px 10px;
+}
+.ann-date {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; color: var(--text3);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.ann-body {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 14px; color: var(--text); line-height: 1.6;
+}
+
+/* ── ABSENCE FORM ── */
+.absence-form { padding: 20px 16px; }
+.form-group { margin-bottom: 18px; }
+.form-input {
+  width: 100%; background: var(--dark2);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  color: var(--text); padding: 11px 14px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200; font-size: 14px;
+  outline: none; transition: border-color .2s;
+}
+.form-input:focus { border-color: var(--crimson); }
+.form-select {
+  width: 100%; background: var(--dark2);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  color: var(--text); padding: 11px 14px;
+  font-family: -apple-system, sans-serif; font-size: 13px;
+  outline: none; appearance: none;
+}
+.form-textarea {
+  width: 100%; background: var(--dark2);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  color: var(--text); padding: 11px 14px;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200; font-size: 14px;
+  outline: none; resize: vertical; min-height: 80px;
+}
+.radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.radio-opt {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 1px solid var(--border2);
+  border-radius: var(--r); cursor: pointer;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px; color: var(--text2);
+  transition: all .15s;
+}
+.radio-opt.selected {
+  border-color: var(--crimson); color: var(--crimson);
+  background: var(--crimson-light);
+}
+.submit-btn {
+  width: 100%; background: linear-gradient(135deg, #c2233e, #9E1B32);
+  color: var(--white); border: none;
+  border-radius: var(--r); padding: 14px;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; transition: background .2s;
+}
+.submit-btn:hover { background: var(--crimson-dark); }
+
+/* ── TABS ── */
+.tab-row {
+  display: flex; border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
+}
+.tab-row::-webkit-scrollbar { display: none; }
+.tab {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text3); padding: 12px 16px;
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all .2s;
+}
+.tab.active { color: var(--text); border-bottom-color: var(--crimson); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 2000;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--dark); border-radius: 12px 12px 0 0;
+  width: 100%; max-width: 540px;
+  max-height: 85vh; overflow-y: auto;
+  padding: 0 0 40px;
+}
+.modal-hd {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0; margin-bottom: 16px;
+}
+.modal-title {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 18px; color: var(--text);
+}
+.modal-close {
+  font-family: -apple-system, sans-serif;
+  font-size: 20px; color: var(--text3);
+  cursor: pointer; padding: 4px 8px; background: none; border: none;
+}
+.modal-body { padding: 0 16px; }
+
+/* ── ATHLETE DETAIL ── */
+.detail-hero {
+  background: var(--crimson); padding: 28px 16px 20px;
+  text-align: center;
+}
+.detail-name {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 24px; color: var(--white); margin-bottom: 4px;
+}
+.detail-role {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; color: rgba(255,255,255,.6);
+  letter-spacing: .15em; text-transform: uppercase;
+}
+.stat-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border);
+}
+.stat-cell {
+  background: var(--dark2); padding: 14px 8px;
+  text-align: center;
+}
+.stat-val {
+  font-family: 'Courier New', monospace;
+  font-size: 18px; color: var(--text);
+}
+.stat-lbl {
+  font-family: -apple-system, sans-serif;
+  font-size: 8px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-top: 3px;
+}
+
+/* ── RACE CARD ── */
+.race-card {
+  background: linear-gradient(180deg, var(--dark3), var(--dark2));
+  border: 1px solid var(--border);
+  border-radius: var(--r2); margin: 0 16px 10px;
+  overflow: hidden;
+}
+.race-hd { padding: 16px; border-bottom: 1px solid var(--border); }
+.race-name {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 16px; color: var(--text); margin-bottom: 4px;
+}
+.race-loc {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px; color: var(--text3);
+}
+.race-date-badge {
+  display: inline-block; margin-top: 10px;
+  background: var(--dark3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 6px 14px;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px; font-weight: 500; color: var(--text2);
+}
+.race-passport {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--crimson); margin-top: 6px; display: block;
+}
+.race-bd { padding: 12px 16px; }
+.race-lineup-btn {
+  font-family: -apple-system, sans-serif;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--crimson); background: var(--crimson-light);
+  border: 1px solid var(--crimson-mid);
+  border-radius: var(--r); padding: 7px 14px;
+  cursor: pointer;
+}
+
+/* ── NUTRITION / GUIDE ── */
+.guide-section { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+.guide-title {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 16px; color: var(--text); margin-bottom: 10px;
+}
+.guide-body {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 13px; color: var(--text2);
+  line-height: 1.7;
+}
+.guide-list {
+  list-style: none; margin-top: 10px;
+}
+.guide-list li {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 13px; color: var(--text2);
+  line-height: 1.6; padding: 4px 0 4px 14px;
+  position: relative;
+}
+.guide-list li::before {
+  content: '—'; position: absolute; left: 0;
+  color: var(--crimson);
+}
+.guide-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.guide-table th {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text3); padding: 8px 12px;
+  text-align: left; border-bottom: 1px solid var(--border2);
+}
+.guide-table td {
+  font-family: -apple-system, 'Helvetica Neue', sans-serif; font-weight: 200;
+  font-size: 13px; color: var(--text2);
+  padding: 9px 12px; border-bottom: 1px solid var(--border);
+}
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--dark3); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 20px;
+  padding: 8px 18px;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px; z-index: 9999;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s; white-space: nowrap;
+}
+#toast.show { opacity: 1; }
+
+/* ── UTILS ── */
+.crimson { color: var(--crimson); }
+.mt8 { margin-top: 8px; }
+.mt16 { margin-top: 16px; }
+.mt20 { margin-top: 20px; }
+.p16 { padding: 16px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.badge {
+  font-family: -apple-system, sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 10px;
+}
+.badge-u19 { background: rgba(158,27,50,.15); color: #c06070; }
+.badge-u17 { background: rgba(74,120,200,.12); color: #6a9de0; }
+
+@media (min-width: 600px) {
+  .quick-links { grid-template-columns: repeat(3, 1fr); }
+  .home-stats { grid-template-columns: repeat(5, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- NAV -->
+<nav id="appNav">
+  <div class="nav-logo">HAWK <span>ROWING</span></div>
+  <div class="nav-tabs" id="navTabs">
+    <div class="nt active" data-s="home" onclick="go('home')">Home</div>
+    <div class="nt" data-s="schedule" onclick="go('schedule')">Schedule</div>
+    <div class="nt" data-s="races" onclick="go('races')">Races</div>
+    <div class="nt" data-s="roster" onclick="go('roster')">Roster</div>
+    <div class="nt" data-s="lineup" onclick="go('lineup')">Lineup</div>
+    <div class="nt coach-only" data-s="coach" onclick="go('coach')">Coach Hub</div>
+    <div class="nt" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
+    <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
+    <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-user" id="navUser" onclick="go('profile')">—</div>
+  </div>
+</nav>
+
+<!-- ABSENCE FAB -->
+<button id="absenceFab" onclick="go('absence')">Report Absence</button>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- LOGIN SCREEN -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-hero">
+    <div class="login-program">Summer Program</div>
+    <div class="login-title">HAWK<br>Rowing Club</div>
+    <div class="login-dates">Gillin Boathouse · Philadelphia</div>
+  </div>
+  <div class="login-body">
+    <div class="login-tagline">Built on effort. Bound by respect.<br>Proven by perseverance.</div>
+    <div class="pr-tabs">
+      <div class="pr-tab active" onclick="switchLoginTab('signin')">Sign In</div>
+      <div class="pr-tab" onclick="switchLoginTab('signup')">Join</div>
+    </div>
+
+    <!-- SIGN IN -->
+    <div id="signinPanel">
+      <div class="pr-err" id="siErr"></div>
+      <label class="pr-label">Email</label>
+      <input class="pr-input" id="siEmail" type="email" placeholder="your@email.com" autocomplete="email">
+      <label class="pr-label">Password</label>
+      <input class="pr-input" id="siPass" type="password" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doSignIn()">
+      <button class="pr-btn" onclick="doSignIn()" id="siBtnTxt">Sign In</button>
+      <div class="pr-link" style="margin-top:12px"><a onclick="showForgot()">Forgot password?</a></div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="signupPanel" style="display:none">
+      <div class="pr-err" id="suErr"></div>
+      <label class="pr-label">Full Name</label>
+      <input class="pr-input" id="suName" type="text" placeholder="First Last" autocomplete="name">
+      <label class="pr-label">Email</label>
+      <input class="pr-input" id="suEmail" type="email" placeholder="your@email.com" autocomplete="email">
+      <label class="pr-label">Password</label>
+      <input class="pr-input" id="suPass" type="password" placeholder="8+ characters">
+      <label class="pr-label">Invite Code</label>
+      <input class="pr-input" id="suCode" type="text" placeholder="From your coach" autocomplete="off" style="font-family:'Courier New',monospace;text-transform:uppercase">
+      <label class="pr-label">I am a</label>
+      <select class="form-select" id="suRole" style="margin-bottom:14px">
+        <option value="junior">Athlete (U19 / U17)</option>
+        <option value="parent">Parent / Guardian</option>
+      </select>
+      <button class="pr-btn" onclick="doSignUp()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- APP SHELL -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="appShell">
+
+  <!-- HOME -->
+  <div class="scr active" id="scr-home">
+    <div class="home-hero">
+      <div class="home-eyebrow">Summer Program</div>
+      <div class="home-headline">Built on effort.<br>Bound by respect.</div>
+      <div class="home-pills">
+        <span class="home-pill">Hard Work</span>
+        <span class="home-pill">Accountability</span>
+        <span class="home-pill">Perseverance</span>
+      </div>
+    </div>
+    <div id="weatherStrip"></div>
+    <div class="home-stats">
+      <div class="home-stat">
+        <div class="home-stat-val" id="homeStatDays">—</div>
+        <div class="home-stat-lbl">Days Left</div>
+      </div>
+      <div class="home-stat">
+        <div class="home-stat-val" id="homeStatAthletes">—</div>
+        <div class="home-stat-lbl">Athletes</div>
+      </div>
+      <div class="home-stat">
+        <div class="home-stat-val">3</div>
+        <div class="home-stat-lbl">Regattas</div>
+      </div>
+    </div>
+    <div class="quick-links">
+      <div class="ql" onclick="go('schedule')">
+        <div class="ql-label">Today</div>
+        <div class="ql-title">Practice Schedule</div>
+      </div>
+      <div class="ql" onclick="go('races')">
+        <div class="ql-label">Summer</div>
+        <div class="ql-title">Race Calendar</div>
+      </div>
+      <div class="ql" onclick="go('roster')">
+        <div class="ql-label">Club</div>
+        <div class="ql-title">Roster</div>
+      </div>
+      <div class="ql" onclick="go('athlete')">
+        <div class="ql-label">Resources</div>
+        <div class="ql-title">Athlete Hub</div>
+      </div>
+      <div class="ql" onclick="go('absence')">
+        <div class="ql-label">Can't Make It?</div>
+        <div class="ql-title">Report Absence</div>
+      </div>
+      <div class="ql coach-only" onclick="go('coach')">
+        <div class="ql-label">Coaches</div>
+        <div class="ql-title">Coach Hub</div>
+      </div>
+    </div>
+    <div class="section" id="homeAnnouncements"></div>
+  </div>
+
+  <!-- SCHEDULE -->
+  <div class="scr" id="scr-schedule">
+    <div class="scr-hd flex-between">
+      <div>
+        <div class="scr-title">Practice Schedule</div>
+        <div class="scr-sub">Mon–Sat through August 11</div>
+      </div>
+      <button class="race-lineup-btn coach-only" onclick="openAddSession()">+ Session</button>
+    </div>
+    <div class="filter-strip" id="schedFilters"></div>
+    <div id="sessList"></div>
+  </div>
+
+  <!-- RACES -->
+  <div class="scr" id="scr-races">
+    <div class="scr-hd">
+      <div class="scr-title">2026 Regattas</div>
+      <div class="scr-sub">Three races this summer</div>
+    </div>
+    <div style="height:16px"></div>
+    <div class="race-card">
+      <div class="race-hd">
+        <div class="race-name">Philadelphia Youth Regatta</div>
+        <div class="race-loc">Schuylkill River, Philadelphia, PA</div>
+        <div class="race-date-badge">Sat, Jul 18</div>
+      </div>
+      <div class="race-bd">
+        <button class="race-lineup-btn" onclick="openLineupForRace('Philadelphia Youth Regatta')">View Lineup</button>
+      </div>
+    </div>
+    <div class="race-card">
+      <div class="race-hd">
+        <div class="race-name">Independence Day Regatta</div>
+        <div class="race-loc">Schuylkill River, Philadelphia, PA</div>
+        <div class="race-date-badge">Jul 24–26</div>
+      </div>
+      <div class="race-bd">
+        <button class="race-lineup-btn" onclick="openLineupForRace('Independence Day Regatta')">View Lineup</button>
+      </div>
+    </div>
+    <div class="race-card">
+      <div class="race-hd">
+        <div class="race-name">Royal Canadian Henley Regatta</div>
+        <div class="race-loc">Martindale Pond, St. Catharines, ON</div>
+        <span class="race-passport">Passport Required</span>
+        <div class="race-date-badge">Aug 4–9</div>
+      </div>
+      <div class="race-bd">
+        <button class="race-lineup-btn" onclick="openLineupForRace('Royal Canadian Henley')">View Lineup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROSTER -->
+  <div class="scr" id="scr-roster">
+    <div class="scr-hd flex-between">
+      <div>
+        <div class="scr-title">Roster</div>
+        <div class="scr-sub" id="rosterCount">Loading…</div>
+      </div>
+      <button class="race-lineup-btn coach-only" onclick="openAddAthlete()">+ Athlete</button>
+    </div>
+    <div class="filter-strip" id="rosterFilters"></div>
+    <div id="rosterList"></div>
+  </div>
+
+  <!-- LINEUP BUILDER -->
+  <div class="scr" id="scr-lineup">
+    <div class="scr-hd flex-between">
+      <div>
+        <div class="scr-title">Lineup Builder</div>
+        <div class="scr-sub">Sweep boats</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Regatta</div>
+      <select class="form-select" id="lineupRace" onchange="buildLineupBoard()">
+        <option>Philadelphia Youth Regatta — Jul 18</option>
+        <option>Independence Day Regatta — Jul 24–26</option>
+        <option>Royal Canadian Henley — Aug 4–9</option>
+      </select>
+    </div>
+    <div class="section">
+      <div class="section-label">Boat Class</div>
+      <div class="filter-strip" style="padding:0;border:none" id="boatClassFilter"></div>
+    </div>
+    <div id="lineupBoard"></div>
+    <div class="p16">
+      <button class="submit-btn coach-only" onclick="saveLineup()">Save Lineup</button>
+    </div>
+  </div>
+
+  <!-- COACH HUB -->
+  <div class="scr" id="scr-coach">
+    <div class="scr-hd">
+      <div class="scr-title">Coach Hub</div>
+      <div class="scr-sub">Athlete performance & attendance</div>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchCoachTab('overview')">Overview</div>
+      <div class="tab" onclick="switchCoachTab('attendance')">Attendance</div>
+      <div class="tab" onclick="switchCoachTab('erg')">Erg Scores</div>
+      <div class="tab" onclick="switchCoachTab('workouts')">Workouts</div>
+      <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
+    </div>
+    <div id="coachTabContent"></div>
+  </div>
+
+  <!-- ATHLETE HUB -->
+  <div class="scr" id="scr-athlete">
+    <div class="scr-hd">
+      <div class="scr-title">Athlete Hub</div>
+      <div class="scr-sub">Training resources & performance log</div>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchAthleteTab('log')">Log Workout</div>
+      <div class="tab" onclick="switchAthleteTab('erg')">Erg Scores</div>
+      <div class="tab" onclick="switchAthleteTab('nutrition')">Nutrition</div>
+      <div class="tab" onclick="switchAthleteTab('lifting')">Lifting</div>
+      <div class="tab" onclick="switchAthleteTab('core')">Core</div>
+      <div class="tab" onclick="switchAthleteTab('resources')">Resources</div>
+    </div>
+    <div id="athleteTabContent"></div>
+  </div>
+
+  <!-- PARENT PORTAL -->
+  <div class="scr" id="scr-parent">
+    <div class="scr-hd">
+      <div class="scr-title">Parent Portal</div>
+      <div class="scr-sub">Updates, schedule & info</div>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchParentTab('updates')">Updates</div>
+      <div class="tab" onclick="switchParentTab('schedule')">Schedule</div>
+      <div class="tab" onclick="switchParentTab('races')">Races</div>
+      <div class="tab" onclick="switchParentTab('info')">Program Info</div>
+    </div>
+    <div id="parentTabContent"></div>
+  </div>
+
+  <!-- ABSENCE -->
+  <div class="scr" id="scr-absence">
+    <div class="scr-hd">
+      <div class="scr-title">Report an Absence</div>
+      <div class="scr-sub">Let your coach know as early as possible</div>
+    </div>
+    <div class="absence-form">
+      <div class="form-group">
+        <label class="pr-label">Athlete Name</label>
+        <select class="form-select" id="absAthlete">
+          <option value="">Select athlete…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Date(s)</label>
+        <input class="form-input" id="absDates" type="text" placeholder="e.g. Mon Jul 14 or Jul 24–26">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Session</label>
+        <div class="radio-group" id="absSession">
+          <div class="radio-opt selected" onclick="selectAbsSession(this,'AM')">AM</div>
+          <div class="radio-opt" onclick="selectAbsSession(this,'PM')">PM</div>
+          <div class="radio-opt" onclick="selectAbsSession(this,'All Day')">All Day</div>
+          <div class="radio-opt" onclick="selectAbsSession(this,'Saturday')">Saturday</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Reason (Optional)</label>
+        <textarea class="form-textarea" id="absReason" placeholder="Family trip, school conflict, illness, etc."></textarea>
+      </div>
+      <button class="submit-btn" onclick="submitAbsence()">Submit Absence Report</button>
+      <div id="absMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+    </div>
+  </div>
+
+</div><!-- /appShell -->
+
+<!-- ATHLETE DETAIL MODAL -->
+<div class="modal-overlay" id="athleteModal">
+  <div class="modal">
+    <div id="athleteModalContent"></div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// SUPABASE CONFIG
+// ════════════════════════════════════════════
+const SUPA_URL = 'https://dbaayypiilwnrbpusiko.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRiYWF5eXBpaWx3bnJicHVzaWtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTg5NzAsImV4cCI6MjA4OTMzNDk3MH0.0D15NkY1PK47Udz7gmPRjXUUDzIryn0MRV4f3tDS6Ls';
+const HRC_CLUB = 'Hawk Rowing Club';
+const HRC_INVITE = 'HRC2026';
+
+function supaHeaders(token) {
+  const t = token || getToken();
+  return {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + (t || SUPA_KEY),
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+}
+
+function getToken() {
+  try {
+    const s = localStorage.getItem('hrc-auth');
+    return s ? JSON.parse(s).access_token : null;
+  } catch(e) { return null; }
+}
+
+async function supaGet(table, params) {
+  const qs = '?' + Object.entries(params).map(([k,v])=>k+'='+v).join('&');
+  const res = await fetch(SUPA_URL+'/rest/v1/'+table+qs, {headers: supaHeaders()});
+  if(!res.ok) return [];
+  return await res.json();
+}
+
+async function supaInsert(table, data) {
+  const res = await fetch(SUPA_URL+'/rest/v1/'+table, {
+    method:'POST', headers: supaHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.ok ? await res.json() : null;
+}
+
+async function supaPatch(table, filters, data) {
+  const qs = '?' + Object.entries(filters).map(([k,v])=>k+'=eq.'+encodeURIComponent(v)).join('&');
+  const res = await fetch(SUPA_URL+'/rest/v1/'+table+qs, {
+    method:'PATCH', headers: supaHeaders(),
+    body: JSON.stringify(data)
+  });
+  return res.ok;
+}
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let CU = null;
+let ATHLETES = [];
+let SESSIONS = [];
+let ABSENCES = [];
+let ERG_SCORES = [];
+let WORKOUTS = [];
+let RESOURCES = [];
+let currentScreen = 'home';
+let rosterFilter = 'all';
+let schedFilter = 'all';
+let coachTab = 'overview';
+let athleteTab = 'log';
+let parentTab = 'updates';
+let lineupBoatClass = 'eight';
+let absSessionVal = 'AM';
+let lineupData = {};
+
+const BOAT_CLASSES = [
+  {id:'eight', label:'8+', seats:8},
+  {id:'four', label:'4+', seats:4},
+  {id:'pair', label:'2+', seats:2},
+];
+
+const AVATAR_COLORS = ['#9E1B32','#7a5840','#4a6878','#5a7a5a','#7a4a6a','#4a7a8a','#8a6a4a','#6a4a8a'];
+
+// ════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════
+function switchLoginTab(tab) {
+  document.querySelectorAll('.pr-tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='signin'?0:1)));
+  document.getElementById('signinPanel').style.display = tab==='signin'?'block':'none';
+  document.getElementById('signupPanel').style.display = tab==='signup'?'block':'none';
+}
+
+async function doSignIn() {
+  const email = document.getElementById('siEmail').value.trim();
+  const pass = document.getElementById('siPass').value;
+  const errEl = document.getElementById('siErr');
+  errEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Please enter email and password.';errEl.style.display='block';return;}
+  document.getElementById('siBtnTxt').textContent='Signing in…';
+  try {
+    const res = await fetch(SUPA_URL+'/auth/v1/token?grant_type=password', {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass})
+    });
+    const data = await res.json();
+    if(!res.ok||data.error){
+      errEl.textContent=data.error_description||'Sign in failed.';
+      errEl.style.display='block';
+      document.getElementById('siBtnTxt').textContent='Sign In';
+      return;
+    }
+    localStorage.setItem('hrc-auth', JSON.stringify({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: Date.now()+(data.expires_in*1000)
+    }));
+    CU = {
+      id: data.user.id,
+      supabase_uid: data.user.id,
+      email: data.user.email,
+      name: data.user.user_metadata?.name || email.split('@')[0],
+      role: data.user.user_metadata?.role || 'junior',
+      club: HRC_CLUB,
+    };
+    await initApp();
+  } catch(e) {
+    errEl.textContent='Connection error.';errEl.style.display='block';
+    document.getElementById('siBtnTxt').textContent='Sign In';
+  }
+}
+
+async function doSignUp() {
+  const name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const pass = document.getElementById('suPass').value;
+  const code = document.getElementById('suCode').value.trim().toUpperCase();
+  const role = document.getElementById('suRole').value;
+  const errEl = document.getElementById('suErr');
+  errEl.style.display='none';
+  if(!name||!email||!pass){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
+  if(pass.length<8){errEl.textContent='Password must be 8+ characters.';errEl.style.display='block';return;}
+  if(code!==HRC_INVITE){errEl.textContent='Invite code not recognised — check with your coach.';errEl.style.display='block';return;}
+  try {
+    const res = await fetch(SUPA_URL+'/auth/v1/signup', {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,data:{name,role,club:HRC_CLUB,clubs:[HRC_CLUB],invite_code:code,account_type:'club',tos_accepted:true,tos_accepted_at:new Date().toISOString()}})
+    });
+    const data = await res.json();
+    if(!res.ok||data.error){errEl.textContent=data.error_description||'Signup failed.';errEl.style.display='block';return;}
+    if(data.user&&!data.session){
+      errEl.style.color='#4a9a6a';
+      errEl.textContent='Check your email to confirm your account, then sign in.';
+      errEl.style.display='block';
+    }
+  } catch(e){errEl.textContent='Connection error.';errEl.style.display='block';}
+}
+
+async function showForgot() {
+  const email = prompt('Enter your email address:');
+  if(!email) return;
+  await fetch(SUPA_URL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
+  toast('Password reset email sent');
+}
+
+function signOut() {
+  localStorage.removeItem('hrc-auth');
+  CU = null; ATHLETES = []; SESSIONS = [];
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('appNav').style.display='none';
+  document.getElementById('absenceFab').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+async function initApp() {
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  document.getElementById('appNav').style.display='flex';
+  document.getElementById('absenceFab').style.display='block';
+
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+  document.querySelectorAll('.coach-only').forEach(el=>{
+    el.style.display = isCoach ? '' : 'none';
+  });
+  document.getElementById('navUser').textContent = CU.name.split(' ')[0];
+
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources()]);
+  buildHome();
+  buildSchedule();
+  buildRoster();
+  buildLineup();
+  buildCoachHub();
+  buildAthleteHub();
+  buildParentPortal();
+  populateAbsenceDropdown();
+  fetchWeather();
+  go('home');
+}
+
+async function loadAthletes() {
+  const rows = await supaGet('hrc_members', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc'});
+  ATHLETES = rows || [];
+}
+
+async function loadSessions() {
+  const today = new Date().toISOString().split('T')[0];
+  const rows = await supaGet('hrc_sessions', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'date': 'gte.'+today, 'select': '*', 'order': 'date.asc,time.asc', 'limit': '100'});
+  SESSIONS = rows || [];
+}
+
+async function loadAbsences() {
+  const rows = await supaGet('hrc_absences', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '200'});
+  ABSENCES = rows || [];
+}
+
+async function loadErgScores() {
+  const rows = await supaGet('hrc_erg_scores', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'date.desc', 'limit': '500'});
+  ERG_SCORES = rows || [];
+}
+
+async function loadWorkouts() {
+  const rows = await supaGet('hrc_workouts', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'date.desc', 'limit': '500'});
+  WORKOUTS = rows || [];
+}
+
+async function loadResources() {
+  const rows = await supaGet('hrc_resources', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '100'});
+  RESOURCES = rows || [];
+}
+
+// Check for existing session on load
+window.addEventListener('DOMContentLoaded', async () => {
+  const stored = localStorage.getItem('hrc-auth');
+  if(stored) {
+    try {
+      const auth = JSON.parse(stored);
+      if(auth.expires_at && Date.now() < auth.expires_at) {
+        const res = await fetch(SUPA_URL+'/auth/v1/user', {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+auth.access_token}});
+        if(res.ok) {
+          const u = await res.json();
+          CU = {id:u.id,supabase_uid:u.id,email:u.email,name:u.user_metadata?.name||u.email,role:u.user_metadata?.role||'junior',club:HRC_CLUB};
+          await initApp(); return;
+        }
+      }
+    } catch(e){}
+  }
+  document.getElementById('loginScreen').style.display='flex';
+});
+
+// ════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════
+function go(screen) {
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nt').forEach(t=>t.classList.toggle('active',t.dataset.s===screen));
+  const el = document.getElementById('scr-'+screen);
+  if(el) { el.classList.add('active'); currentScreen = screen; }
+  window.scrollTo(0,0);
+}
+
+// ════════════════════════════════════════════
+// HOME
+// ════════════════════════════════════════════
+function buildHome() {
+  const end = new Date('2026-08-11');
+  const days = Math.max(0, Math.ceil((end - new Date())/(1000*60*60*24)));
+  document.getElementById('homeStatDays').textContent = days;
+  document.getElementById('homeStatAthletes').textContent = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).length || '—';
+}
+
+// ════════════════════════════════════════════
+// WEATHER
+// ════════════════════════════════════════════
+async function fetchWeather() {
+  try {
+    const res = await fetch('https://api.weather.gov/gridpoints/PHI/52,68/forecast/hourly');
+    if(!res.ok) return;
+    const data = await res.json();
+    const period = data.properties.periods[0];
+    if(!period) return;
+    const temp = period.temperature;
+    const wind = period.windSpeed;
+    const desc = period.shortForecast;
+    const windNum = parseInt(wind);
+    const safe = windNum < 15 ? 'safe-green' : windNum < 20 ? 'safe-amber' : 'safe-red';
+    const safeLabel = windNum < 15 ? 'Safe to Row' : windNum < 20 ? 'Use Caution' : 'Hold Practice';
+    document.getElementById('weatherStrip').innerHTML = `
+      <div class="weather-strip">
+        <div class="weather-temp">${temp}°</div>
+        <div class="weather-info">
+          <div>${desc}</div>
+          <div style="color:var(--text3);margin-top:2px">Wind ${wind} · Gillin Boathouse</div>
+        </div>
+        <div class="weather-safe ${safe}">${safeLabel}</div>
+      </div>`;
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+// SCHEDULE
+// ════════════════════════════════════════════
+function buildSchedule() {
+  const filters = [{id:'all',l:'All'},{id:'AM',l:'AM Sessions'},{id:'PM',l:'PM Sessions'},{id:'U19',l:'U19'},{id:'U17',l:'U17'}];
+  document.getElementById('schedFilters').innerHTML = filters.map(f=>
+    `<div class="fpill${f.id===schedFilter?' active':''}" onclick="setSchedFilter('${f.id}')">${f.l}</div>`
+  ).join('');
+
+  let sessions = SESSIONS;
+  if(schedFilter==='AM') sessions = sessions.filter(s=>s.time<'12:00');
+  else if(schedFilter==='PM') sessions = sessions.filter(s=>s.time>='12:00');
+  else if(schedFilter==='U19') sessions = sessions.filter(s=>s.group==='U19');
+  else if(schedFilter==='U17') sessions = sessions.filter(s=>s.group==='U17');
+
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU?.role);
+
+  if(!sessions.length) {
+    document.getElementById('sessList').innerHTML = `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No sessions scheduled yet.</div>`;
+    return;
+  }
+
+  let html = '';
+  let lastDate = '';
+  sessions.forEach(s => {
+    const d = new Date(s.date+'T12:00:00');
+    const dateStr = d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+    if(dateStr!==lastDate) {
+      html += `<div class="section-label" style="padding:14px 16px 4px;font-family:-apple-system,sans-serif;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--crimson)">${dateStr}</div>`;
+      lastDate = dateStr;
+    }
+    const typeClass = {UT2:'type-ut2',UT1:'type-ut1',AT:'type-at',TECH:'type-tech',MIXED:'type-mixed'}[s.type]||'type-mixed';
+    const time = s.time ? s.time.slice(0,5) : '—';
+    const h = parseInt(time); const ampm = h<12?'AM':'PM';
+    const t12 = h>12?`${h-12}:${time.slice(3)}`:(h===0?`12:${time.slice(3)}`:time);
+    html += `<div class="sess-card">
+      <div class="sess-hd">
+        <div class="sess-time-block">
+          <div class="sess-time">${t12}</div>
+          <div class="sess-ampm">${ampm}</div>
+        </div>
+        <div class="sess-div"></div>
+        <div class="sess-info">
+          <div class="sess-name">${s.name}</div>
+          <div class="sess-meta">${s.type||''}${s.group?' · '+s.group:''}${s.max_athletes?' · Max '+s.max_athletes:''}</div>
+        </div>
+        <div class="sess-type ${typeClass}">${s.type||''}</div>
+      </div>
+      ${s.notes?`<div style="padding:10px 16px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);line-height:1.6">${s.notes}</div>`:''}
+    </div>`;
+  });
+  document.getElementById('sessList').innerHTML = html;
+}
+
+function setSchedFilter(f) { schedFilter=f; buildSchedule(); }
+
+// ════════════════════════════════════════════
+// ROSTER
+// ════════════════════════════════════════════
+const ROSTER_FILTERS = [{id:'all',l:'All'},{id:'U19',l:'U19'},{id:'U17',l:'U17'},{id:'coach',l:'Coaches'}];
+
+function buildRoster() {
+  document.getElementById('rosterFilters').innerHTML = ROSTER_FILTERS.map(f=>
+    `<div class="fpill${f.id===rosterFilter?' active':''}" onclick="setRosterFilter('${f.id}')">${f.l}</div>`
+  ).join('');
+
+  let athletes = ATHLETES;
+  if(rosterFilter==='U19') athletes = athletes.filter(a=>a.group==='U19');
+  else if(rosterFilter==='U17') athletes = athletes.filter(a=>a.group==='U17');
+  else if(rosterFilter==='coach') athletes = athletes.filter(a=>['head-coach','asst-coach'].includes(a.role));
+  else athletes = athletes.filter(a=>a.role!=='admin');
+
+  document.getElementById('rosterCount').textContent = `${athletes.length} members`;
+
+  if(!athletes.length) {
+    document.getElementById('rosterList').innerHTML = `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No athletes yet.</div>`;
+    return;
+  }
+
+  document.getElementById('rosterList').innerHTML = athletes.map(a => {
+    const color = a.color || AVATAR_COLORS[Math.abs((a.name||'').length*7)%AVATAR_COLORS.length];
+    const initials = a.initials || (a.name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+    const ergScores = ERG_SCORES.filter(e=>e.athlete_id===a.id);
+    const bestErg = ergScores.length ? Math.min(...ergScores.filter(e=>e.test==='2k').map(e=>e.time_seconds||9999)).toString() : '—';
+    const attendance = SESSIONS.length ? Math.round((ABSENCES.filter(ab=>ab.athlete_id===a.id).length/Math.max(SESSIONS.length,1))*100) : '—';
+    const groupBadge = a.group ? `<span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>` : '';
+    return `<div class="athlete-card" onclick="openAthleteDetail('${a.id}')">
+      <div class="athlete-avatar" style="background:${color}">${initials}</div>
+      <div class="athlete-info">
+        <div class="athlete-name">${a.name} ${groupBadge}</div>
+        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.side||'Rower'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setRosterFilter(f) { rosterFilter=f; buildRoster(); }
+
+// ════════════════════════════════════════════
+// LINEUP BUILDER
+// ════════════════════════════════════════════
+function buildLineup() {
+  const classes = BOAT_CLASSES;
+  document.getElementById('boatClassFilter').innerHTML = classes.map(c=>
+    `<div class="fpill${c.id===lineupBoatClass?' active':''}" onclick="setBoatClass('${c.id}')">${c.label}</div>`
+  ).join('');
+  buildLineupBoard();
+}
+
+function setBoatClass(cls) { lineupBoatClass=cls; buildLineup(); }
+
+function buildLineupBoard() {
+  const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
+  if(!bc) return;
+  const race = document.getElementById('lineupRace')?.value||'';
+  const key = race+'|'+lineupBoatClass;
+  if(!lineupData[key]) lineupData[key] = Array(bc.seats).fill(null);
+  const seats = lineupData[key];
+  const sides = bc.seats===8 ? ['S','P','S','P','S','P','S','P'] : bc.seats===4 ? ['S','P','S','P'] : ['S','P'];
+
+  let html = `<div class="boat-diagram">
+    <div class="boat-hd">
+      <span class="boat-label">${bc.label} — ${race.split('—')[0].trim()}</span>
+      <button class="race-lineup-btn" onclick="clearLineup('${key}')">Clear</button>
+    </div>
+    ${seats.map((seat,i)=>`
+      <div class="seat-row">
+        <div class="seat-num">${bc.seats-i}</div>
+        <div class="seat-slot${seat?' filled':''}" onclick="assignSeat('${key}',${i})">
+          ${seat||'<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">Tap to assign</span>'}
+        </div>
+        <div class="seat-side">${sides[i]}</div>
+      </div>`).join('')}
+    <div class="seat-row" style="border-top:1px solid var(--border2)">
+      <div class="seat-num" style="color:var(--text3)">Cox</div>
+      <div class="seat-slot${lineupData[key+'|cox']?' filled':''}" onclick="assignCox('${key}')">
+        ${lineupData[key+'|cox']||'<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">Tap to assign</span>'}
+      </div>
+      <div class="seat-side"></div>
+    </div>
+  </div>`;
+  document.getElementById('lineupBoard').innerHTML = html;
+}
+
+function assignSeat(key, idx) {
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const name = prompt('Assign seat '+(parseInt(BOAT_CLASSES.find(c=>c.id===lineupBoatClass)?.seats||8)-idx)+':\n'+athletes.map((a,i)=>`${i+1}. ${a.name}`).join('\n')+'\n\nEnter number or name:');
+  if(!name) return;
+  const num = parseInt(name);
+  const athlete = isNaN(num) ? athletes.find(a=>a.name.toLowerCase().includes(name.toLowerCase())) : athletes[num-1];
+  if(athlete) { lineupData[key][idx]=athlete.name; buildLineupBoard(); }
+}
+
+function assignCox(key) {
+  const name = prompt('Assign coxswain (name):');
+  if(name) { lineupData[key+'|cox']=name; buildLineupBoard(); }
+}
+
+function clearLineup(key) { 
+  lineupData[key]=Array(BOAT_CLASSES.find(c=>c.id===lineupBoatClass)?.seats||8).fill(null); 
+  lineupData[key+'|cox']=null;
+  buildLineupBoard(); 
+}
+
+async function saveLineup() {
+  const race = document.getElementById('lineupRace')?.value||'';
+  const key = race+'|'+lineupBoatClass;
+  const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
+  const record = {
+    club: HRC_CLUB,
+    race: race,
+    boat_class: lineupBoatClass,
+    seats: JSON.stringify(lineupData[key]),
+    cox: lineupData[key+'|cox']||null,
+    created_by: CU.id,
+    updated_at: new Date().toISOString()
+  };
+  await supaInsert('hrc_lineups', record);
+  toast('Lineup saved');
+}
+
+function openLineupForRace(race) {
+  document.getElementById('lineupRace').value = race;
+  buildLineupBoard();
+  go('lineup');
+}
+
+// ════════════════════════════════════════════
+// COACH HUB
+// ════════════════════════════════════════════
+function buildCoachHub() { switchCoachTab(coachTab); }
+
+function switchCoachTab(tab) {
+  coachTab = tab;
+  document.querySelectorAll('#scr-coach .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().includes(tab)));
+  const el = document.getElementById('coachTabContent');
+
+  if(tab==='overview') {
+    const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+    el.innerHTML = athletes.map(a=>{
+      const absCount = ABSENCES.filter(ab=>ab.athlete_id===a.id).length;
+      const totalSess = Math.max(SESSIONS.length,1);
+      const attRate = Math.round(((totalSess-absCount)/totalSess)*100);
+      const ergBest = ERG_SCORES.filter(e=>e.athlete_id===a.id&&e.test==='2k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+      const ergStr = ergBest ? fmtTime(ergBest.time_seconds) : '—';
+      const workoutCount = WORKOUTS.filter(w=>w.athlete_id===a.id).length;
+      return `<div class="coach-athlete-row" onclick="openAthleteDetail('${a.id}')">
+        <div class="cah-name">${a.name} ${a.group?`<span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>`:''}</div>
+        <div class="cah-bars">
+          <div class="cah-bar-wrap">
+            <div class="cah-bar-lbl">Attendance</div>
+            <div class="cah-bar-bg"><div class="cah-bar-fill" style="width:${attRate}%"></div></div>
+          </div>
+          <div class="cah-stat">${attRate}%</div>
+          <div class="cah-stat" style="min-width:50px">${ergStr}</div>
+          <div class="cah-stat" style="min-width:32px;color:var(--text3)">${workoutCount}w</div>
+        </div>
+      </div>`;
+    }).join('') || '<div class="section" style="color:var(--text3)">No athletes yet.</div>';
+
+  } else if(tab==='attendance') {
+    el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Recent Absences</div>`+
+      (ABSENCES.slice(0,30).map(ab=>{
+        const a = ATHLETES.find(x=>x.id===ab.athlete_id);
+        return `<div class="coach-athlete-row">
+          <div class="cah-name">${a?.name||ab.athlete_name||'Unknown'}</div>
+          <div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">${ab.dates||''} · ${ab.session||''} ${ab.reason?'· '+ab.reason:''}</div>
+        </div>`;
+      }).join('')||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No absences recorded.</div>');
+
+  } else if(tab==='erg') {
+    el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Best 2k Times</div>`+
+      ATHLETES.filter(a=>['junior','rower'].includes(a.role)).map(a=>{
+        const best = ERG_SCORES.filter(e=>e.athlete_id===a.id&&e.test==='2k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+        return `<div class="coach-athlete-row" onclick="openAthleteDetail('${a.id}')">
+          <div class="flex-between">
+            <div class="cah-name">${a.name}</div>
+            <div style="font-family:'Courier New',monospace;font-size:16px;color:var(--text)">${best?fmtTime(best.time_seconds):'—'}</div>
+          </div>
+          ${best?`<div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3);margin-top:4px">${best.date||''}</div>`:''}
+        </div>`;
+      }).join('');
+
+  } else if(tab==='workouts') {
+    el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Recent Workouts</div>`+
+      WORKOUTS.slice(0,40).map(w=>{
+        const a = ATHLETES.find(x=>x.id===w.athlete_id);
+        return `<div class="coach-athlete-row">
+          <div class="flex-between">
+            <div class="cah-name">${a?.name||'Unknown'}</div>
+            <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3)">${w.date||''}</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-top:4px">${w.type||''} · ${w.details||''} · ${w.distance_duration||''}</div>
+        </div>`;
+      }).join('') || '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No workouts logged.</div>';
+
+  } else if(tab==='absences') {
+    switchCoachTab('attendance');
+  }
+}
+
+// ════════════════════════════════════════════
+// ATHLETE HUB
+// ════════════════════════════════════════════
+function buildAthleteHub() { switchAthleteTab(athleteTab); }
+
+function switchAthleteTab(tab) {
+  athleteTab = tab;
+  document.querySelectorAll('#scr-athlete .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().replace(' ','')===tab));
+  const el = document.getElementById('athleteTabContent');
+
+  if(tab==='log') {
+    el.innerHTML = `<div class="absence-form">
+      <div class="form-group">
+        <label class="pr-label">Date</label>
+        <input class="form-input" id="wkDate" type="date" value="${new Date().toISOString().split('T')[0]}">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Session Type</label>
+        <select class="form-select" id="wkType">
+          <option>On Water</option><option>Erg</option><option>Lifting</option><option>Core</option><option>Cross-Training</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Workout Details</label>
+        <input class="form-input" id="wkDetails" placeholder="e.g. 4×2k @ r20">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Distance / Duration</label>
+        <input class="form-input" id="wkDist" placeholder="e.g. 8000m or 45 min">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">RPE (1–10)</label>
+        <input class="form-input" id="wkRpe" type="number" min="1" max="10" placeholder="7">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Notes</label>
+        <textarea class="form-textarea" id="wkNotes" placeholder="How did it feel?"></textarea>
+      </div>
+      <button class="submit-btn" onclick="submitWorkout()">Log Workout</button>
+      <div id="wkMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+    </div>`;
+
+  } else if(tab==='erg') {
+    el.innerHTML = `<div class="absence-form">
+      <div class="form-group">
+        <label class="pr-label">Test</label>
+        <select class="form-select" id="ergTest">
+          <option value="2k">2,000m</option>
+          <option value="6k">6,000m</option>
+          <option value="500m">500m</option>
+          <option value="4x2k">4×2,000m</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Time (m:ss.t)</label>
+        <input class="form-input" id="ergTime" placeholder="e.g. 6:52.3">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Split /500m</label>
+        <input class="form-input" id="ergSplit" placeholder="e.g. 1:43.1">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Watts</label>
+        <input class="form-input" id="ergWatts" type="number" placeholder="e.g. 280">
+      </div>
+      <button class="submit-btn" onclick="submitErgScore()">Submit Erg Score</button>
+      <div id="ergMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+    </div>
+    <div style="padding:16px">
+      <div class="section-label">My Erg History</div>
+      ${ERG_SCORES.filter(e=>e.athlete_id===CU.id).slice(0,10).map(e=>`
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;color:var(--text2)">${e.test} · ${e.date||''}</span>
+          <span style="font-family:'Courier New',monospace;font-size:14px;color:var(--text)">${e.time_raw||fmtTime(e.time_seconds)}</span>
+        </div>`).join('') || '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding-top:12px">No scores yet.</div>'}
+    </div>`;
+
+  } else if(tab==='nutrition') {
+    el.innerHTML = `
+      <div class="guide-section">
+        <div class="guide-title">The 5 Non-Negotiables</div>
+        <ul class="guide-list">
+          <li>Never skip breakfast on practice days — you can't perform on empty glycogen stores.</li>
+          <li>Eat within 30 minutes of finishing every practice. Chocolate milk or a recovery snack, no exceptions.</li>
+          <li>Drink before you're thirsty. Bring a water bottle to every practice — pale yellow urine means you're hydrated.</li>
+          <li>Carbs are not the enemy. Rowers need 2–3x the carbs of the average person.</li>
+          <li>Race week = carb week. Start loading glycogen 3 days out. Nothing new the day before a race.</li>
+        </ul>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Around Practice</div>
+        <div class="guide-body">3–4 hrs before: a carb-focused meal (oatmeal + eggs, pasta + chicken). 1–2 hrs before: a light carb snack (banana, toast, bagel). The 30 minutes right after practice is the most important fueling window of the day — chocolate milk, a recovery shake, or Greek yogurt + banana.</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Race Day</div>
+        <div class="guide-body">Night before: familiar high-carb dinner (pasta, rice, potatoes), no alcohol. Morning of: oatmeal, toast, banana, eggs, 3–4 hrs out. 90–120 min before: a light snack only. In the last 30–45 min, sip water or sports drink — nothing solid, no sugary snacks. Refuel within 30 minutes of finishing.</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Hydration</div>
+        <div class="guide-body">Just 2% dehydration measurably hurts performance. Baseline: 3–3.5 liters/day. During practice: sip 150–250ml every 15–20 minutes. Pale yellow urine is the target.</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Supplements — Talk to a Doctor First</div>
+        <div class="guide-body">Creatine, beta-alanine, and caffeine have strong evidence behind them for rowing performance, but <strong>high school athletes should not start any supplement without first talking to a physician or registered sports dietitian.</strong> Whole-food nutrition comes first.</div>
+      </div>`;
+
+  } else if(tab==='lifting') {
+    el.innerHTML = `
+      <div class="guide-section">
+        <div class="guide-title">Lifting Program</div>
+        <div class="guide-body" style="margin-bottom:16px">For junior men, ages 16–19. Two sessions per week, always with a coach or supervising adult present. Focus on clean form over heavy weight.</div>
+        <div class="section-label">Day A — Pull / Legs</div>
+        <table class="guide-table">
+          <tr><th>Exercise</th><th>Sets × Reps</th></tr>
+          <tr><td>Goblet or Back Squat</td><td>3 × 8–10</td></tr>
+          <tr><td>Romanian Deadlift</td><td>3 × 8</td></tr>
+          <tr><td>Pull-ups or Lat Pulldown</td><td>3 × 6–10</td></tr>
+          <tr><td>Single-Leg Step-ups</td><td>3 × 10 each leg</td></tr>
+          <tr><td>Seated Cable Row</td><td>3 × 10</td></tr>
+        </table>
+        <div class="section-label" style="margin-top:20px">Day B — Push / Posterior Chain</div>
+        <table class="guide-table">
+          <tr><th>Exercise</th><th>Sets × Reps</th></tr>
+          <tr><td>Trap Bar or Conventional Deadlift</td><td>3 × 6–8</td></tr>
+          <tr><td>Dumbbell Bench or Push-ups</td><td>3 × 10</td></tr>
+          <tr><td>Walking Lunges</td><td>3 × 10 each leg</td></tr>
+          <tr><td>Standing Overhead Press</td><td>3 × 8</td></tr>
+          <tr><td>Face Pulls</td><td>3 × 12–15</td></tr>
+        </table>
+        <div class="guide-body" style="margin-top:12px">Start light and build over the season. Never lift through pain, especially in the lower back.</div>
+      </div>`;
+
+  } else if(tab==='core') {
+    el.innerHTML = `
+      <div class="guide-section">
+        <div class="guide-title">Core Program</div>
+        <div class="guide-body" style="margin-bottom:16px">4 days per week — alternate Circuit A and B, done after practice. 3 rounds, resting 30–45 seconds between exercises.</div>
+        <div class="section-label">Circuit A — Mon & Thu</div>
+        <table class="guide-table">
+          <tr><th>Exercise</th><th>Duration / Reps</th></tr>
+          <tr><td>Plank</td><td>45–60 sec</td></tr>
+          <tr><td>Side Plank (each side)</td><td>30–45 sec</td></tr>
+          <tr><td>Russian Twists</td><td>20 total</td></tr>
+          <tr><td>Hollow Body Hold</td><td>30 sec</td></tr>
+          <tr><td>Superman Hold</td><td>30 sec</td></tr>
+          <tr><td>Bird Dog (each side)</td><td>10 each</td></tr>
+        </table>
+        <div class="section-label" style="margin-top:20px">Circuit B — Tue & Fri</div>
+        <table class="guide-table">
+          <tr><th>Exercise</th><th>Duration / Reps</th></tr>
+          <tr><td>Mountain Climbers</td><td>30 sec</td></tr>
+          <tr><td>Reverse Crunches</td><td>15–20</td></tr>
+          <tr><td>Flutter Kicks</td><td>30 sec</td></tr>
+          <tr><td>Dead Bug (each side)</td><td>10 each</td></tr>
+          <tr><td>V-Ups</td><td>12–15</td></tr>
+          <tr><td>Plank Shoulder Taps</td><td>20 total</td></tr>
+        </table>
+      </div>`;
+
+  } else if(tab==='resources') {
+    const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+    el.innerHTML = `
+      ${isCoach?`<div style="padding:16px 16px 0"><button class="race-lineup-btn" onclick="openAddResource()">+ Add Resource</button></div>`:''}
+      <div style="padding:16px">
+        ${RESOURCES.length ? RESOURCES.map(r=>{
+          const yt = getYouTubeId(r.url);
+          return `<div class="card" style="padding:0;overflow:hidden">
+            ${yt?`<div style="position:relative;padding-bottom:56.25%;height:0"><iframe src="https://www.youtube.com/embed/${yt}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen loading="lazy"></iframe></div>`:''}
+            <div style="padding:14px 16px">
+              <div class="card-title">${r.title||'Untitled'}</div>
+              ${r.description?`<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-top:4px;line-height:1.6">${r.description}</div>`:''}
+              ${!yt&&r.url?`<a href="${r.url}" target="_blank" rel="noopener" style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--crimson);display:inline-block;margin-top:8px">Open link →</a>`:''}
+              <div style="font-family:-apple-system,sans-serif;font-size:9px;color:var(--text3);margin-top:8px;letter-spacing:.05em">${r.posted_by_name||''} ${r.created_at?'· '+new Date(r.created_at).toLocaleDateString():''}</div>
+            </div>
+          </div>`;
+        }).join('') : '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No resources shared yet.</div>'}
+      </div>`;
+  }
+}
+
+function getYouTubeId(url) {
+  if(!url) return null;
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+async function openAddResource() {
+  const title = prompt('Title:'); if(!title) return;
+  const url = prompt('URL (YouTube or any link):'); if(!url) return;
+  const description = prompt('Description (optional):') || '';
+  const record = {club:HRC_CLUB,title,url,description,posted_by:CU.id,posted_by_name:CU.name,created_at:new Date().toISOString()};
+  await supaInsert('hrc_resources', record);
+  RESOURCES.unshift(record);
+  switchAthleteTab('resources');
+  toast('Resource added');
+}
+
+// ════════════════════════════════════════════
+// PARENT PORTAL
+// ════════════════════════════════════════════
+function buildParentPortal() { switchParentTab(parentTab); }
+
+function switchParentTab(tab) {
+  parentTab = tab;
+  document.querySelectorAll('#scr-parent .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase()===tab||(tab==='updates'&&t.textContent==='Updates')));
+  const el = document.getElementById('parentTabContent');
+
+  if(tab==='updates') {
+    el.innerHTML = `<div style="height:12px"></div>
+      <div class="announcement-card">
+        <div class="ann-date">Program Info</div>
+        <div class="ann-body">The 2026 summer program runs July 6 through August 11. Season kickoff meeting is Monday, July 6 at 5:00 PM — no morning practice that day.</div>
+      </div>
+      <div class="announcement-card">
+        <div class="ann-date">Regattas</div>
+        <div class="ann-body">Three races this summer: Philadelphia Youth Regatta (Jul 18), Independence Day Regatta (Jul 24–26), and the Royal Canadian Henley (Aug 4–9). Passport required for Henley.</div>
+      </div>
+      <div class="announcement-card">
+        <div class="ann-date">Absences</div>
+        <div class="ann-body">Please report all absences using the Report Absence button as early as possible. This goes directly to the coaching staff.</div>
+      </div>`;
+
+  } else if(tab==='schedule') {
+    el.innerHTML = `
+      <div class="section">
+        <div class="section-label">U19 Schedule</div>
+        <div class="card">
+          <div style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--text2);line-height:2">
+            <div><strong style="color:var(--text)">Mon / Wed / Fri</strong> &nbsp; 6:30–8:30 AM &amp; 5:00–7:30 PM</div>
+            <div><strong style="color:var(--text)">Tue / Thu</strong> &nbsp; 5:00–7:30 PM</div>
+            <div><strong style="color:var(--text)">Saturday</strong> &nbsp; 7:30–10:00 AM</div>
+            <div><strong style="color:var(--text)">Sunday</strong> &nbsp; Off</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-top:10px">Kickoff meeting Mon, Jul 6 at 5:00 PM (no AM session).</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">U17 Schedule</div>
+        <div class="card">
+          <div style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--text2);line-height:2">
+            <div><strong style="color:var(--text)">Monday–Friday</strong> &nbsp; 5:00–7:30 PM</div>
+            <div><strong style="color:var(--text)">Saturday</strong> &nbsp; 10:00 AM</div>
+            <div><strong style="color:var(--text)">Sunday</strong> &nbsp; Off</div>
+          </div>
+        </div>
+      </div>`;
+
+  } else if(tab==='races') {
+    el.innerHTML = `<div style="height:12px"></div>
+      <div class="race-card">
+        <div class="race-hd">
+          <div class="race-name">Philadelphia Youth Regatta</div>
+          <div class="race-loc">Schuylkill River, Philadelphia, PA</div>
+          <div class="race-date-badge">Sat, Jul 18</div>
+        </div>
+      </div>
+      <div class="race-card">
+        <div class="race-hd">
+          <div class="race-name">Independence Day Regatta</div>
+          <div class="race-loc">Schuylkill River, Philadelphia, PA</div>
+          <div class="race-date-badge">Jul 24–26</div>
+        </div>
+      </div>
+      <div class="race-card">
+        <div class="race-hd">
+          <div class="race-name">Royal Canadian Henley Regatta</div>
+          <div class="race-loc">Martindale Pond, St. Catharines, ON</div>
+          <span class="race-passport">Passport Required</span>
+          <div class="race-date-badge">Aug 4–9</div>
+        </div>
+      </div>`;
+
+  } else if(tab==='info') {
+    el.innerHTML = `
+      <div class="section">
+        <div class="section-label">Location</div>
+        <div class="card">
+          <div class="card-title">Gillin Boathouse</div>
+          <div class="card-sub">Schuylkill River, Philadelphia, PA</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Coaches</div>
+        ${ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role)).map(c=>`
+          <div class="card">
+            <div class="card-title">${c.name}</div>
+            <div class="card-sub">${c.role==='head-coach'?'Head Coach':'Coach'}${c.email?' · '+c.email:''}</div>
+          </div>`).join('') || '<div class="card"><div class="card-sub">Loading coaching staff…</div></div>'}
+      </div>
+      <div class="section">
+        <div class="section-label">Contact</div>
+        <div class="card">
+          <div class="card-title">Tom Wedgwood</div>
+          <div class="card-sub">Head Coach · tom@rowform.app</div>
+        </div>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+// ABSENCE FORM
+// ════════════════════════════════════════════
+function populateAbsenceDropdown() {
+  const sel = document.getElementById('absAthlete');
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  sel.innerHTML = '<option value="">Select athlete…</option>' +
+    athletes.map(a=>`<option value="${a.id}" ${a.id===CU.id?'selected':''}>${a.name}</option>`).join('');
+}
+
+function selectAbsSession(el, val) {
+  document.querySelectorAll('.radio-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  absSessionVal = val;
+}
+
+async function submitAbsence() {
+  const athleteId = document.getElementById('absAthlete').value;
+  const dates = document.getElementById('absDates').value.trim();
+  const reason = document.getElementById('absReason').value.trim();
+  const msgEl = document.getElementById('absMsg');
+  if(!athleteId||!dates){msgEl.textContent='Please select an athlete and enter dates.';msgEl.style.color='#e05c5c';msgEl.style.display='block';return;}
+  const athlete = ATHLETES.find(a=>a.id===athleteId);
+  const record = {
+    club: HRC_CLUB,
+    athlete_id: athleteId,
+    athlete_name: athlete?.name||'',
+    dates, session: absSessionVal,
+    reason: reason||null,
+    submitted_by: CU.id,
+    created_at: new Date().toISOString()
+  };
+  await supaInsert('hrc_absences', record);
+  ABSENCES.unshift(record);
+  msgEl.textContent='Absence reported — coaching staff notified.';
+  msgEl.style.color='var(--green)';msgEl.style.display='block';
+  document.getElementById('absDates').value='';
+  document.getElementById('absReason').value='';
+  toast('Absence reported');
+}
+
+// ════════════════════════════════════════════
+// WORKOUT / ERG SUBMISSIONS
+// ════════════════════════════════════════════
+async function submitWorkout() {
+  const date = document.getElementById('wkDate').value;
+  const type = document.getElementById('wkType').value;
+  const details = document.getElementById('wkDetails').value.trim();
+  const dist = document.getElementById('wkDist').value.trim();
+  const rpe = document.getElementById('wkRpe').value;
+  const notes = document.getElementById('wkNotes').value.trim();
+  const msgEl = document.getElementById('wkMsg');
+  if(!date||!type){msgEl.textContent='Please fill in date and session type.';msgEl.style.color='#e05c5c';msgEl.style.display='block';return;}
+  const record = {club:HRC_CLUB,athlete_id:CU.id,athlete_name:CU.name,date,type,details,distance_duration:dist,rpe:rpe?parseInt(rpe):null,notes,created_at:new Date().toISOString()};
+  await supaInsert('hrc_workouts', record);
+  WORKOUTS.unshift(record);
+  msgEl.textContent='Workout logged.';msgEl.style.color='var(--green)';msgEl.style.display='block';
+  toast('Workout logged');
+}
+
+async function submitErgScore() {
+  const test = document.getElementById('ergTest').value;
+  const timeRaw = document.getElementById('ergTime').value.trim();
+  const split = document.getElementById('ergSplit').value.trim();
+  const watts = document.getElementById('ergWatts').value;
+  const msgEl = document.getElementById('ergMsg');
+  if(!timeRaw){msgEl.textContent='Please enter your time.';msgEl.style.color='#e05c5c';msgEl.style.display='block';return;}
+  const timeSec = parseErgTime(timeRaw);
+  const record = {club:HRC_CLUB,athlete_id:CU.id,athlete_name:CU.name,test,time_raw:timeRaw,time_seconds:timeSec,split_500:split||null,watts:watts?parseInt(watts):null,date:new Date().toISOString().split('T')[0],created_at:new Date().toISOString()};
+  await supaInsert('hrc_erg_scores', record);
+  ERG_SCORES.unshift(record);
+  msgEl.textContent='Erg score submitted.';msgEl.style.color='var(--green)';msgEl.style.display='block';
+  toast('Erg score saved');
+}
+
+function parseErgTime(s) {
+  const parts = s.split(':');
+  if(parts.length===2) return parseFloat(parts[0])*60+parseFloat(parts[1]);
+  return parseFloat(s);
+}
+
+function fmtTime(sec) {
+  if(!sec||isNaN(sec)) return '—';
+  const m = Math.floor(sec/60);
+  const s = (sec%60).toFixed(1).padStart(4,'0');
+  return `${m}:${s}`;
+}
+
+// ════════════════════════════════════════════
+// ATHLETE DETAIL MODAL
+// ════════════════════════════════════════════
+function openAthleteDetail(id) {
+  const a = ATHLETES.find(x=>x.id===id);
+  if(!a) return;
+  const color = a.color || AVATAR_COLORS[Math.abs((a.name||'').length*7)%AVATAR_COLORS.length];
+  const ergScores = ERG_SCORES.filter(e=>e.athlete_id===id).sort((x,y)=>new Date(y.date)-new Date(x.date));
+  const workouts = WORKOUTS.filter(w=>w.athlete_id===id).sort((x,y)=>new Date(y.date)-new Date(x.date));
+  const absences = ABSENCES.filter(ab=>ab.athlete_id===id);
+  const best2k = ergScores.filter(e=>e.test==='2k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+  const attRate = Math.round(((Math.max(SESSIONS.length,1)-absences.length)/Math.max(SESSIONS.length,1))*100);
+
+  document.getElementById('athleteModalContent').innerHTML = `
+    <div class="detail-hero" style="background:${color}">
+      <div class="detail-name">${a.name}</div>
+      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':'Rower'}</div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-val">${best2k?fmtTime(best2k.time_seconds):'—'}</div><div class="stat-lbl">Best 2k</div></div>
+      <div class="stat-cell"><div class="stat-val">${attRate}%</div><div class="stat-lbl">Attendance</div></div>
+      <div class="stat-cell"><div class="stat-val">${workouts.length}</div><div class="stat-lbl">Workouts</div></div>
+    </div>
+    <div style="padding:16px">
+      <div class="section-label">Erg History</div>
+      ${ergScores.slice(0,5).map(e=>`
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;color:var(--text2)">${e.test} · ${e.date||''}</span>
+          <span style="font-family:'Courier New',monospace;font-size:14px;color:var(--text)">${e.time_raw||fmtTime(e.time_seconds)}</span>
+        </div>`).join('') || '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:8px 0">No scores yet.</div>'}
+      <div class="section-label" style="margin-top:16px">Recent Workouts</div>
+      ${workouts.slice(0,4).map(w=>`
+        <div style="padding:9px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between">
+            <span style="font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;color:var(--text2)">${w.type}</span>
+            <span style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">${w.date||''}</span>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-top:2px">${w.details||''} ${w.distance_duration?'· '+w.distance_duration:''}</div>
+        </div>`).join('') || '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:8px 0">No workouts logged.</div>'}
+      <div class="section-label" style="margin-top:16px">Absences (${absences.length})</div>
+      ${absences.slice(0,5).map(ab=>`
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${ab.dates} · ${ab.session} ${ab.reason?'· '+ab.reason:''}</div>`
+      ).join('') || '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:8px 0">No absences.</div>'}
+      ${['head-coach','asst-coach','admin'].includes(CU.role) ? `
+      <div class="section-label" style="margin-top:16px;color:var(--amber)">Coach Only — Contacts & Medical</div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);line-height:1.9">
+        ${a.grade?`<div><span style="color:var(--text3)">Grade:</span> ${a.grade}${a.dob?' · DOB '+a.dob:''}</div>`:''}
+        ${a.experience?`<div><span style="color:var(--text3)">Experience:</span> ${a.experience}</div>`:''}
+        ${a.shirt_size?`<div><span style="color:var(--text3)">Shirt:</span> ${a.shirt_size}</div>`:''}
+        ${a.parent_name?`<div style="margin-top:6px"><span style="color:var(--text3)">Parent:</span> ${a.parent_name} (${a.parent_relation||''})</div>`:''}
+        ${a.parent_email?`<div><span style="color:var(--text3)">Email:</span> <a href="mailto:${a.parent_email}" style="color:var(--crimson)">${a.parent_email}</a></div>`:''}
+        ${a.parent_phone?`<div><span style="color:var(--text3)">Phone:</span> <a href="tel:${a.parent_phone}" style="color:var(--crimson)">${a.parent_phone}</a></div>`:''}
+        ${a.ec_name?`<div style="margin-top:6px"><span style="color:var(--text3)">Emergency:</span> ${a.ec_name} (${a.ec_relation||''}) — <a href="tel:${a.ec_phone}" style="color:var(--crimson)">${a.ec_phone||''}</a></div>`:''}
+        ${a.physician?`<div><span style="color:var(--text3)">Physician:</span> ${a.physician}</div>`:''}
+        ${a.medical_notes?`<div style="margin-top:6px;padding:8px 10px;background:rgba(212,146,42,.08);border-left:2px solid var(--amber);border-radius:2px"><span style="color:var(--amber);font-weight:500">Medical:</span> ${a.medical_notes}</div>`:''}
+        ${a.additional_notes?`<div style="margin-top:6px;color:var(--text3)">${a.additional_notes}</div>`:''}
+      </div>`:''}
+    </div>
+    <div style="padding:0 16px 16px">
+      <button class="submit-btn" style="background:var(--dark3);color:var(--text2)" onclick="closeAthleteModal()">Close</button>
+    </div>`;
+  document.getElementById('athleteModal').classList.add('open');
+}
+
+function closeAthleteModal() {
+  document.getElementById('athleteModal').classList.remove('open');
+}
+document.getElementById('athleteModal').addEventListener('click',function(e){
+  if(e.target===this) closeAthleteModal();
+});
+
+// ════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+function openAddSession() {
+  const name = prompt('Session name:'); if(!name) return;
+  const date = prompt('Date (YYYY-MM-DD):'); if(!date) return;
+  const time = prompt('Time (HH:MM):'); if(!time) return;
+  const type = prompt('Type (UT2/UT1/AT/TECH/MIXED):') || 'UT2';
+  const group = prompt('Group (U19/U17/All):') || 'All';
+  const notes = prompt('Notes (optional):') || '';
+  const record = {id:crypto.randomUUID(),club:HRC_CLUB,name,date,time,type:type.toUpperCase(),group,notes,max_athletes:30,created_at:new Date().toISOString()};
+  supaInsert('hrc_sessions', record).then(()=>{ SESSIONS.push(record); SESSIONS.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)); buildSchedule(); toast('Session added'); });
+}
+
+function openAddAthlete() {
+  const name = prompt('Athlete name:'); if(!name) return;
+  const group = prompt('Group (U19/U17):') || 'U19';
+  const email = prompt('Email (optional):') || '';
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const color = AVATAR_COLORS[Math.abs(name.length*7)%AVATAR_COLORS.length];
+  const record = {id:crypto.randomUUID(),club:HRC_CLUB,name,role:'junior',group,email,initials,color,sweep:true,scull:false,side:'',created_at:new Date().toISOString()};
+  supaInsert('hrc_members', record).then(()=>{ ATHLETES.push(record); ATHLETES.sort((a,b)=>a.name.localeCompare(b.name)); buildRoster(); buildHome(); toast(name+' added'); });
+}
+</script>
+</body>
+</html>
