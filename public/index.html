@@ -1054,6 +1054,7 @@ body {
       <div class="tab" onclick="switchCoachTab('erg')">Erg Scores</div>
       <div class="tab" onclick="switchCoachTab('workouts')">Workouts</div>
       <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
+      <div class="tab" onclick="switchCoachTab('shifts')">Shifts</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
@@ -1197,6 +1198,8 @@ let ERG_SCORES = [];
 let WORKOUTS = [];
 let RESOURCES = [];
 let ANNOUNCEMENTS = [];
+let SHIFTS = [];
+let shiftWeekStart = null;
 let currentScreen = 'home';
 let rosterFilter = 'all';
 let schedFilter = 'all';
@@ -1322,7 +1325,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1365,6 +1368,11 @@ async function loadWorkouts() {
 async function loadResources() {
   const rows = await supaGet('hrc_resources', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '100'});
   RESOURCES = rows || [];
+}
+
+async function loadShifts() {
+  const rows = await supaGet('hrc_shifts', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '500'});
+  SHIFTS = rows || [];
 }
 
 async function loadAnnouncements() {
@@ -1806,6 +1814,10 @@ function switchCoachTab(tab) {
   } else if(tab==='absences') {
     switchCoachTab('attendance');
 
+  } else if(tab==='shifts') {
+    renderShifts();
+    return;
+
   } else if(tab==='profile') {
     const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
     el.innerHTML = `<div class="absence-form">
@@ -2039,6 +2051,98 @@ function getYouTubeId(url) {
   if(!url) return null;
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
   return m ? m[1] : null;
+}
+
+// ── COACH SHIFTS ──
+const SHIFT_PATTERN = [
+  // dow: 0=Sun..6=Sat
+  {id:'hrc-am',  label:'HRC Morning',   time:'6:30–8:30 AM',   dows:[1,3,5]},
+  {id:'ltr',     label:'Learn to Row',  time:'2:30–5:00 PM',   dows:[1,2,3,4,5]},
+  {id:'hrc-pm',  label:'HRC Evening',   time:'5:00–7:30 PM',   dows:[1,2,3,4,5]},
+  {id:'hrc-sat', label:'HRC Saturday',  time:'8:00–10:30 AM',  dows:[6]},
+];
+
+function weekStart(d) {
+  const x = new Date(d); const day = x.getDay();
+  x.setDate(x.getDate() - ((day+6)%7)); // Monday start
+  x.setHours(12,0,0,0);
+  return x;
+}
+
+function shiftKey(dateStr, shiftId) { return dateStr+'|'+shiftId; }
+
+function renderShifts() {
+  const el = document.getElementById('coachTabContent');
+  if(!shiftWeekStart) shiftWeekStart = weekStart(new Date());
+  const days = [];
+  for(let i=0;i<7;i++){ const d=new Date(shiftWeekStart); d.setDate(d.getDate()+i); days.push(d); }
+  const fmt = d => d.toISOString().split('T')[0];
+  const isHead = CU.role==='head-coach' || CU.role==='admin';
+  const myName = (ATHLETES.find(a=>a.id===CU.member_id)?.name)||CU.name;
+
+  const rangeLbl = days[0].toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:16px">
+    <button class="race-lineup-btn" onclick="shiftWeek(-1)">← Prev</button>
+    <div style="font-family:-apple-system,sans-serif;font-weight:400;font-size:13px;color:var(--text)">${rangeLbl}</div>
+    <button class="race-lineup-btn" onclick="shiftWeek(1)">Next →</button>
+  </div>`;
+
+  days.forEach(d => {
+    const dow = d.getDay();
+    const slots = SHIFT_PATTERN.filter(s=>s.dows.includes(dow));
+    if(!slots.length) return;
+    const dateStr = fmt(d);
+    html += `<div class="section-label" style="padding:10px 16px 4px">${d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</div>`;
+    slots.forEach(s => {
+      const rec = SHIFTS.find(x=>x.date===dateStr && x.shift===s.id);
+      const names = rec?.coach_names || '';
+      const mine = names.toLowerCase().includes((myName||'').toLowerCase());
+      html += `<div class="card" style="margin:0 16px 8px;${mine?'border-color:var(--crimson);':''}" ${isHead?`onclick="assignShift('${dateStr}','${s.id}')"`:''}>
+        <div class="flex-between">
+          <div>
+            <div class="card-title" style="font-size:14px">${s.label} ${mine?'<span class="badge" style="background:var(--crimson-light);color:var(--crimson)">You</span>':''}</div>
+            <div class="card-sub">${s.time}</div>
+          </div>
+          <div style="text-align:right;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:${names?'var(--text2)':'var(--text3)'}">${names||(isHead?'Tap to assign':'Unassigned')}</div>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function shiftWeek(dir) {
+  shiftWeekStart.setDate(shiftWeekStart.getDate() + dir*7);
+  renderShifts();
+}
+
+async function assignShift(dateStr, shiftId) {
+  const coaches = ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role));
+  const listing = coaches.map((c,i)=>`${i+1}. ${c.name}`).join('\n');
+  const input = prompt('Assign coaches (comma-separated numbers or names):\n'+listing+'\n\nLeave blank to clear.');
+  if(input===null) return;
+  let names = '';
+  if(input.trim()){
+    names = input.split(',').map(tok=>{
+      tok = tok.trim();
+      const n = parseInt(tok);
+      if(!isNaN(n) && coaches[n-1]) return coaches[n-1].name;
+      const m = coaches.find(c=>c.name.toLowerCase().includes(tok.toLowerCase()));
+      return m ? m.name : tok;
+    }).filter(Boolean).join(', ');
+  }
+  const existing = SHIFTS.find(x=>x.date===dateStr && x.shift===shiftId);
+  if(existing){
+    await supaPatch('hrc_shifts', {id: existing.id}, {coach_names: names});
+    existing.coach_names = names;
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, date: dateStr, shift: shiftId, coach_names: names, created_at: new Date().toISOString()};
+    await supaInsert('hrc_shifts', rec);
+    SHIFTS.push(rec);
+  }
+  renderShifts();
+  toast('Shift updated');
 }
 
 async function openAddAnnouncement() {
