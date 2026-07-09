@@ -1054,6 +1054,7 @@ body {
       <div class="tab" onclick="switchCoachTab('erg')">Erg Scores</div>
       <div class="tab" onclick="switchCoachTab('workouts')">Workouts</div>
       <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
+      <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
   </div>
@@ -1085,6 +1086,7 @@ body {
       <div class="tab active" onclick="switchParentTab('updates')">Updates</div>
       <div class="tab" onclick="switchParentTab('schedule')">Schedule</div>
       <div class="tab" onclick="switchParentTab('races')">Races</div>
+      <div class="tab" onclick="switchParentTab('nutrition')">Nutrition</div>
       <div class="tab" onclick="switchParentTab('info')">Program Info</div>
     </div>
     <div id="parentTabContent"></div>
@@ -1194,6 +1196,7 @@ let ABSENCES = [];
 let ERG_SCORES = [];
 let WORKOUTS = [];
 let RESOURCES = [];
+let ANNOUNCEMENTS = [];
 let currentScreen = 'home';
 let rosterFilter = 'all';
 let schedFilter = 'all';
@@ -1319,7 +1322,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1364,6 +1367,11 @@ async function loadResources() {
   RESOURCES = rows || [];
 }
 
+async function loadAnnouncements() {
+  const rows = await supaGet('hrc_announcements', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '50'});
+  ANNOUNCEMENTS = rows || [];
+}
+
 // Link the signed-in auth user to their imported roster record.
 // Roster rows were imported with parent emails, so we match by
 // supabase_uid first, then by normalized athlete name.
@@ -1382,12 +1390,14 @@ async function linkMemberRecord() {
   if(me) {
     CU.member_id = me.id;
     if(!['head-coach','asst-coach','admin'].includes(CU.role)) CU.role = me.role || CU.role;
-  } else if(['junior','rower'].includes(CU.role)) {
-    // New athlete not on the imported roster — create their member row
+  } else {
+    // Not on the roster yet — create a member row (athlete or coach)
+    const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
     const initials = (CU.name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     const color = AVATAR_COLORS[Math.abs((CU.name||'').length*7)%AVATAR_COLORS.length];
     const rec = {id: crypto.randomUUID(), club: HRC_CLUB, name: CU.name, email: CU.email,
-      role: 'junior', initials, color, sweep: true, scull: false, side: '', supabase_uid: CU.id,
+      role: isCoachRole ? (CU.role==='head-coach'?'head-coach':'asst-coach') : 'junior',
+      initials, color, sweep: true, scull: false, side: '', supabase_uid: CU.id,
       created_at: new Date().toISOString()};
     const res = await supaInsert('hrc_members', rec);
     if(res) { ATHLETES.push(rec); CU.member_id = rec.id; }
@@ -1795,12 +1805,85 @@ function switchCoachTab(tab) {
 
   } else if(tab==='absences') {
     switchCoachTab('attendance');
+
+  } else if(tab==='profile') {
+    const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
+    el.innerHTML = `<div class="absence-form">
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">This contact information is shown to parents in the Parent Portal.</div>
+      <div class="form-group">
+        <label class="pr-label">Display Name</label>
+        <input class="form-input" id="cpName" value="${me.name||CU.name||''}">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Title</label>
+        <select class="form-select" id="cpTitle">
+          <option value="head-coach" ${me.role==='head-coach'?'selected':''}>Head Coach</option>
+          <option value="asst-coach" ${me.role!=='head-coach'?'selected':''}>Coach</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Email (shown to parents)</label>
+        <input class="form-input" id="cpEmail" type="email" value="${me.email||CU.email||''}">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Phone (shown to parents)</label>
+        <input class="form-input" id="cpPhone" type="tel" placeholder="e.g. 215-555-0100" value="${me.phone||''}">
+      </div>
+      <button class="submit-btn" onclick="saveCoachProfile()">Save Profile</button>
+      <div id="cpMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+    </div>`;
   }
+}
+
+async function saveCoachProfile() {
+  const name = document.getElementById('cpName').value.trim();
+  const role = document.getElementById('cpTitle').value;
+  const email = document.getElementById('cpEmail').value.trim();
+  const phone = document.getElementById('cpPhone').value.trim();
+  const msgEl = document.getElementById('cpMsg');
+  if(!CU.member_id){ msgEl.textContent='No member record found — sign out and back in.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const ok = await supaPatch('hrc_members', {id: CU.member_id}, {name, role, email, phone});
+  const me = ATHLETES.find(a=>a.id===CU.member_id);
+  if(me){ me.name=name; me.role=role; me.email=email; me.phone=phone; }
+  msgEl.textContent = ok ? 'Profile saved — visible to parents now.' : 'Save failed — try again.';
+  msgEl.style.color = ok ? 'var(--green)' : '#e05c5c';
+  msgEl.style.display='block';
+  if(ok) toast('Profile saved');
 }
 
 // ════════════════════════════════════════════
 // ATHLETE HUB
 // ════════════════════════════════════════════
+function nutritionGuideHTML() {
+  return `
+      <div class="guide-section">
+        <div class="guide-title">The 5 Non-Negotiables</div>
+        <ul class="guide-list">
+          <li>Never skip breakfast on practice days — you can't perform on empty glycogen stores.</li>
+          <li>Eat within 30 minutes of finishing every practice. Chocolate milk or a recovery snack, no exceptions.</li>
+          <li>Drink before you're thirsty. Bring a water bottle to every practice — pale yellow urine means you're hydrated.</li>
+          <li>Carbs are not the enemy. Rowers need 2–3x the carbs of the average person.</li>
+          <li>Race week = carb week. Start loading glycogen 3 days out. Nothing new the day before a race.</li>
+        </ul>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Around Practice</div>
+        <div class="guide-body">3–4 hrs before: a carb-focused meal (oatmeal + eggs, pasta + chicken). 1–2 hrs before: a light carb snack (banana, toast, bagel). The 30 minutes right after practice is the most important fueling window of the day — chocolate milk, a recovery shake, or Greek yogurt + banana.</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Race Day</div>
+        <div class="guide-body">Night before: familiar high-carb dinner (pasta, rice, potatoes), no alcohol. Morning of: oatmeal, toast, banana, eggs, 3–4 hrs out. 90–120 min before: a light snack only. In the last 30–45 min, sip water or sports drink — nothing solid, no sugary snacks. Refuel within 30 minutes of finishing.</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Hydration</div>
+        <div class="guide-body">Just 2% dehydration measurably hurts performance. Baseline: 3–3.5 liters/day. During practice: sip 150–250ml every 15–20 minutes. Pale yellow urine is the target.</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title">Supplements — Talk to a Doctor First</div>
+        <div class="guide-body">Creatine, beta-alanine, and caffeine have strong evidence behind them for rowing performance, but <strong>high school athletes should not start any supplement without first talking to a physician or registered sports dietitian.</strong> Whole-food nutrition comes first.</div>
+      </div>`;
+}
+
 function buildAthleteHub() { switchAthleteTab(athleteTab); }
 
 function switchAthleteTab(tab) {
@@ -1876,33 +1959,7 @@ function switchAthleteTab(tab) {
     </div>`;
 
   } else if(tab==='nutrition') {
-    el.innerHTML = `
-      <div class="guide-section">
-        <div class="guide-title">The 5 Non-Negotiables</div>
-        <ul class="guide-list">
-          <li>Never skip breakfast on practice days — you can't perform on empty glycogen stores.</li>
-          <li>Eat within 30 minutes of finishing every practice. Chocolate milk or a recovery snack, no exceptions.</li>
-          <li>Drink before you're thirsty. Bring a water bottle to every practice — pale yellow urine means you're hydrated.</li>
-          <li>Carbs are not the enemy. Rowers need 2–3x the carbs of the average person.</li>
-          <li>Race week = carb week. Start loading glycogen 3 days out. Nothing new the day before a race.</li>
-        </ul>
-      </div>
-      <div class="guide-section">
-        <div class="guide-title">Around Practice</div>
-        <div class="guide-body">3–4 hrs before: a carb-focused meal (oatmeal + eggs, pasta + chicken). 1–2 hrs before: a light carb snack (banana, toast, bagel). The 30 minutes right after practice is the most important fueling window of the day — chocolate milk, a recovery shake, or Greek yogurt + banana.</div>
-      </div>
-      <div class="guide-section">
-        <div class="guide-title">Race Day</div>
-        <div class="guide-body">Night before: familiar high-carb dinner (pasta, rice, potatoes), no alcohol. Morning of: oatmeal, toast, banana, eggs, 3–4 hrs out. 90–120 min before: a light snack only. In the last 30–45 min, sip water or sports drink — nothing solid, no sugary snacks. Refuel within 30 minutes of finishing.</div>
-      </div>
-      <div class="guide-section">
-        <div class="guide-title">Hydration</div>
-        <div class="guide-body">Just 2% dehydration measurably hurts performance. Baseline: 3–3.5 liters/day. During practice: sip 150–250ml every 15–20 minutes. Pale yellow urine is the target.</div>
-      </div>
-      <div class="guide-section">
-        <div class="guide-title">Supplements — Talk to a Doctor First</div>
-        <div class="guide-body">Creatine, beta-alanine, and caffeine have strong evidence behind them for rowing performance, but <strong>high school athletes should not start any supplement without first talking to a physician or registered sports dietitian.</strong> Whole-food nutrition comes first.</div>
-      </div>`;
+    el.innerHTML = nutritionGuideHTML();
 
   } else if(tab==='lifting') {
     el.innerHTML = `
@@ -1984,6 +2041,16 @@ function getYouTubeId(url) {
   return m ? m[1] : null;
 }
 
+async function openAddAnnouncement() {
+  const title = prompt('Notice title (e.g. Schedule Change):'); if(!title) return;
+  const body = prompt('Notice text:'); if(!body) return;
+  const rec = {club:HRC_CLUB,title,body,posted_by:CU.id,posted_by_name:CU.name,created_at:new Date().toISOString()};
+  await supaInsert('hrc_announcements', rec);
+  ANNOUNCEMENTS.unshift(rec);
+  switchParentTab('updates');
+  toast('Notice posted');
+}
+
 async function openAddResource() {
   const title = prompt('Title:'); if(!title) return;
   const url = prompt('URL (YouTube or any link):'); if(!url) return;
@@ -2006,7 +2073,17 @@ function switchParentTab(tab) {
   const el = document.getElementById('parentTabContent');
 
   if(tab==='updates') {
+    const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+    const posted = ANNOUNCEMENTS.map(a=>{
+      const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      return `<div class="announcement-card">
+        <div class="ann-date">${a.title||'Notice'} · ${dt}${a.posted_by_name?' · '+a.posted_by_name:''}</div>
+        <div class="ann-body">${a.body||''}</div>
+      </div>`;
+    }).join('');
     el.innerHTML = `<div style="height:12px"></div>
+      ${isCoach?`<div style="padding:0 16px 12px"><button class="race-lineup-btn" onclick="openAddAnnouncement()">+ Post Notice</button></div>`:''}
+      ${posted}
       <div class="announcement-card">
         <div class="ann-date">Program Info</div>
         <div class="ann-body">The 2026 summer program runs July 6 through August 11. Season kickoff meeting is Monday, July 6 at 5:00 PM — no morning practice that day.</div>
@@ -2070,6 +2147,9 @@ function switchParentTab(tab) {
         </div>
       </div>`;
 
+  } else if(tab==='nutrition') {
+    el.innerHTML = nutritionGuideHTML();
+
   } else if(tab==='info') {
     el.innerHTML = `
       <div class="section">
@@ -2084,16 +2164,12 @@ function switchParentTab(tab) {
         ${ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role)).map(c=>`
           <div class="card">
             <div class="card-title">${c.name}</div>
-            <div class="card-sub">${c.role==='head-coach'?'Head Coach':'Coach'}${c.email?' · '+c.email:''}</div>
-          </div>`).join('') || '<div class="card"><div class="card-sub">Loading coaching staff…</div></div>'}
+            <div class="card-sub">${c.role==='head-coach'?'Head Coach':'Coach'}</div>
+            ${c.email?`<div style="margin-top:6px"><a href="mailto:${c.email}" style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--crimson)">${c.email}</a></div>`:''}
+            ${c.phone?`<div style="margin-top:2px"><a href="tel:${c.phone}" style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--crimson)">${c.phone}</a></div>`:''}
+          </div>`).join('') || '<div class="card"><div class="card-sub">Coaching staff will appear here.</div></div>'}
       </div>
-      <div class="section">
-        <div class="section-label">Contact</div>
-        <div class="card">
-          <div class="card-title">Tom Wedgwood</div>
-          <div class="card-sub">Head Coach · tom@rowform.app</div>
-        </div>
-      </div>`;
+`;
   }
 }
 
