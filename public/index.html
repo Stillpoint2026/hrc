@@ -1233,6 +1233,7 @@ let boatEditId = null;
 let THREADS = [];
 let MESSAGES = [];
 let currentThreadId = null;
+let msgView = 'list';
 let shiftWeekStart = null;
 let currentScreen = 'home';
 let rosterFilter = 'all';
@@ -2276,6 +2277,7 @@ function visibleThreads() {
 
 function buildMessages() {
   currentThreadId = null;
+  msgView = 'list';
   renderThreadList();
 }
 
@@ -2302,6 +2304,7 @@ function renderThreadList() {
 
 async function openThread(id) {
   currentThreadId = id;
+  msgView = 'thread';
   await loadMessages(id);
   renderThreadDetail();
 }
@@ -2359,6 +2362,7 @@ function openNewThreadForm() {
   if(!isCoach) {
     const existing = THREADS.find(t=>t.kind==='individual' && t.athlete_id===CU.member_id);
     if(existing) { openThread(existing.id); return; }
+    msgView = 'compose';
     document.getElementById('msgScrSub').textContent = 'New message to Coaches';
     el.innerHTML = `<div class="absence-form">
       <div class="form-group">
@@ -2373,6 +2377,7 @@ function openNewThreadForm() {
   }
 
   document.getElementById('msgScrSub').textContent = 'New message';
+  msgView = 'compose';
   const juniors = ATHLETES.filter(a=>a.role==='junior').sort((a,b)=>a.name.localeCompare(b.name));
   el.innerHTML = `<div class="absence-form">
     <div class="form-group">
@@ -2454,7 +2459,7 @@ async function createThread() {
 }
 
 async function messagePoll() {
-  if(currentScreen!=='messages' || !CU) return;
+  if(currentScreen!=='messages' || !CU || msgView==='compose') return;
   if(currentThreadId) {
     await loadMessages(currentThreadId);
     renderBubbles();
