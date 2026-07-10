@@ -824,6 +824,7 @@ body {
     <div class="nt" data-s="lineup" onclick="go('lineup')">Lineup</div>
     <div class="nt coach-only" data-s="coach" onclick="go('coach')">Coach Hub</div>
     <div class="nt" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
+    <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
   </div>
@@ -1078,6 +1079,18 @@ body {
     <div id="athleteTabContent"></div>
   </div>
 
+  <!-- MESSAGES -->
+  <div class="scr" id="scr-messages">
+    <div class="scr-hd flex-between">
+      <div>
+        <div class="scr-title">Messages</div>
+        <div class="scr-sub" id="msgScrSub">Coach announcements & direct messages</div>
+      </div>
+      <button class="race-lineup-btn coach-only" onclick="openNewThreadForm()">+ New Message</button>
+    </div>
+    <div id="messagesContent"></div>
+  </div>
+
   <!-- PARENT PORTAL -->
   <div class="scr" id="scr-parent">
     <div class="scr-hd">
@@ -1217,6 +1230,9 @@ let ANNOUNCEMENTS = [];
 let SHIFTS = [];
 let BOATS = [];
 let boatEditId = null;
+let THREADS = [];
+let MESSAGES = [];
+let currentThreadId = null;
 let shiftWeekStart = null;
 let currentScreen = 'home';
 let rosterFilter = 'all';
@@ -1368,7 +1384,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1377,9 +1393,11 @@ async function initApp() {
   buildCoachHub();
   buildAthleteHub();
   buildParentPortal();
+  buildMessages();
   populateAbsenceDropdown();
   fetchWeather();
   go('home');
+  setInterval(messagePoll, 8000);
 }
 
 async function loadAthletes() {
@@ -1421,6 +1439,16 @@ async function loadShifts() {
 async function loadBoats() {
   const rows = await supaGet('hrc_boats', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '200'});
   BOATS = rows || [];
+}
+
+async function loadThreads() {
+  const rows = await supaGet('hrc_threads', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'last_message_at.desc.nullslast', 'limit': '200'});
+  THREADS = rows || [];
+}
+
+async function loadMessages(threadId) {
+  const rows = await supaGet('hrc_messages', {'thread_id': 'eq.'+encodeURIComponent(threadId), 'select': '*', 'order': 'created_at.asc', 'limit': '500'});
+  MESSAGES = rows || [];
 }
 
 async function loadAnnouncements() {
@@ -2227,6 +2255,180 @@ async function deleteBoat(id) {
   const ok = await supaDelete('hrc_boats', {id});
   if(ok) { BOATS = BOATS.filter(b=>b.id!==id); toast('Boat removed'); }
   switchCoachTab('boats');
+}
+
+// ── MESSAGING ──
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime())/1000);
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+function visibleThreads() {
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+  if(isCoach) return THREADS;
+  const me = ATHLETES.find(a=>a.id===CU.member_id);
+  const myGroup = me?.group;
+  return THREADS.filter(t => (t.kind==='individual' && t.athlete_id===CU.member_id) || (t.kind==='group' && (t.group_tag==='All' || t.group_tag===myGroup)));
+}
+
+function buildMessages() {
+  currentThreadId = null;
+  renderThreadList();
+}
+
+function renderThreadList() {
+  const el = document.getElementById('messagesContent');
+  document.getElementById('msgScrSub').textContent = 'Coach announcements & direct messages';
+  const threads = visibleThreads().slice().sort((a,b)=>(b.last_message_at||b.created_at||'').localeCompare(a.last_message_at||a.created_at||''));
+  if(!threads.length) {
+    el.innerHTML = '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No messages yet.</div>';
+    return;
+  }
+  el.innerHTML = threads.map(t=>{
+    const badge = t.kind==='individual' ? 'Direct' : (t.group_tag==='All' ? 'All Squad' : t.group_tag);
+    const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
+    return `<div class="card" style="cursor:pointer" onclick="openThread('${t.id}')">
+      <div class="flex-between">
+        <div class="card-title">${t.title}</div>
+        <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">${badge}</div>
+      </div>
+      <div class="card-sub" style="margin-top:4px">${t.last_message_preview||''}${when?' · '+when:''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function openThread(id) {
+  currentThreadId = id;
+  await loadMessages(id);
+  renderThreadDetail();
+}
+
+function renderThreadDetail() {
+  const t = THREADS.find(x=>x.id===currentThreadId);
+  if(!t) { buildMessages(); return; }
+  document.getElementById('msgScrSub').textContent = t.title;
+  const el = document.getElementById('messagesContent');
+  el.innerHTML = `
+    <div style="padding:0 16px 8px">
+      <button class="race-lineup-btn" onclick="buildMessages()">← All Messages</button>
+    </div>
+    <div id="msgBubbles" style="padding:0 16px;display:flex;flex-direction:column;gap:10px;max-height:55vh;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;padding:14px 16px">
+      <input class="form-input" id="msgInput" placeholder="Type a message…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();sendMessage();}">
+      <button class="submit-btn" style="width:auto;padding:0 20px" onclick="sendMessage()">Send</button>
+    </div>`;
+  renderBubbles();
+}
+
+function renderBubbles() {
+  const wrap = document.getElementById('msgBubbles');
+  if(!wrap) return;
+  wrap.innerHTML = MESSAGES.map(m=>{
+    const mine = m.sender_id===CU.id;
+    return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:75%">
+      ${!mine?`<div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3);margin-bottom:2px">${m.sender_name}</div>`:''}
+      <div style="background:${mine?'var(--crimson)':'var(--dark3)'};color:${mine?'#fff':'var(--text)'};padding:8px 12px;border-radius:12px;font-family:-apple-system,sans-serif;font-weight:300;font-size:13px;line-height:1.4">${m.body}</div>
+    </div>`;
+  }).join('') || '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:12px 0">Say hello 👋</div>';
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const body = input.value.trim();
+  if(!body || !currentThreadId) return;
+  input.value = '';
+  const now = new Date().toISOString();
+  const message = {id:crypto.randomUUID(), thread_id:currentThreadId, club:HRC_CLUB, sender_id:CU.id, sender_name:CU.name, sender_role:CU.role, body, created_at:now};
+  MESSAGES.push(message);
+  renderBubbles();
+  const res = await supaInsert('hrc_messages', message);
+  if(!res) { toast('Message failed to send'); return; }
+  await supaPatch('hrc_threads', {id: currentThreadId}, {last_message_at: now, last_message_preview: body.slice(0,80)});
+  const t = THREADS.find(x=>x.id===currentThreadId);
+  if(t) { t.last_message_at = now; t.last_message_preview = body.slice(0,80); }
+}
+
+function openNewThreadForm() {
+  const el = document.getElementById('messagesContent');
+  document.getElementById('msgScrSub').textContent = 'New message';
+  const juniors = ATHLETES.filter(a=>a.role==='junior').sort((a,b)=>a.name.localeCompare(b.name));
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group">
+      <label class="pr-label">Send To</label>
+      <select class="form-select" id="newThreadKind" onchange="toggleThreadKind()">
+        <option value="individual">Individual Athlete</option>
+        <option value="group">Group / Squad</option>
+      </select>
+    </div>
+    <div class="form-group" id="threadIndivWrap">
+      <label class="pr-label">Athlete</label>
+      <select class="form-select" id="newThreadAthlete">
+        ${juniors.map(a=>`<option value="${a.id}">${a.name}${a.group?' ('+a.group+')':''}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group" id="threadGroupWrap" style="display:none">
+      <label class="pr-label">Group</label>
+      <select class="form-select" id="newThreadGroup">
+        <option value="All">All Athletes</option>
+        <option value="U19">U19</option>
+        <option value="U17">U17</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">First Message</label>
+      <textarea class="form-textarea" id="newThreadBody" placeholder="Type your message..."></textarea>
+    </div>
+    <button class="submit-btn" onclick="createThread()">Send</button>
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="buildMessages()">Cancel</button>
+    <div id="newThreadMsg" style="margin-top:10px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;color:#e05c5c;display:none"></div>
+  </div>`;
+}
+
+function toggleThreadKind() {
+  const kind = document.getElementById('newThreadKind').value;
+  document.getElementById('threadIndivWrap').style.display = kind==='individual' ? '' : 'none';
+  document.getElementById('threadGroupWrap').style.display = kind==='group' ? '' : 'none';
+}
+
+async function createThread() {
+  const kind = document.getElementById('newThreadKind').value;
+  const body = document.getElementById('newThreadBody').value.trim();
+  const msgEl = document.getElementById('newThreadMsg');
+  if(!body) { msgEl.textContent='Message cannot be empty.'; msgEl.style.display='block'; return; }
+  let athlete_id=null, group_tag=null, title='';
+  if(kind==='individual') {
+    athlete_id = document.getElementById('newThreadAthlete').value;
+    const a = ATHLETES.find(x=>x.id===athlete_id);
+    if(!a) { msgEl.textContent='Pick an athlete.'; msgEl.style.display='block'; return; }
+    title = a.name;
+  } else {
+    group_tag = document.getElementById('newThreadGroup').value;
+    title = group_tag==='All' ? 'All Athletes' : group_tag+' Squad';
+  }
+  const now = new Date().toISOString();
+  const thread = {id:crypto.randomUUID(), club:HRC_CLUB, kind, athlete_id, group_tag, title, created_by:CU.id, created_by_name:CU.name, created_at:now, last_message_at:now, last_message_preview:body.slice(0,80)};
+  const res = await supaInsert('hrc_threads', thread);
+  if(!res) { msgEl.textContent='Could not create thread — try again.'; msgEl.style.display='block'; return; }
+  THREADS.unshift(thread);
+  const message = {id:crypto.randomUUID(), thread_id:thread.id, club:HRC_CLUB, sender_id:CU.id, sender_name:CU.name, sender_role:CU.role, body, created_at:now};
+  await supaInsert('hrc_messages', message);
+  toast('Message sent');
+  openThread(thread.id);
+}
+
+async function messagePoll() {
+  if(currentScreen!=='messages' || !CU) return;
+  if(currentThreadId) {
+    await loadMessages(currentThreadId);
+    renderBubbles();
+  } else {
+    await loadThreads();
+    renderThreadList();
+  }
 }
 
 function getYouTubeId(url) {
