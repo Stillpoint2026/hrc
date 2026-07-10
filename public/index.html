@@ -1086,7 +1086,7 @@ body {
         <div class="scr-title">Messages</div>
         <div class="scr-sub" id="msgScrSub">Coach announcements & direct messages</div>
       </div>
-      <button class="race-lineup-btn coach-only" onclick="openNewThreadForm()">+ New Message</button>
+      <button class="race-lineup-btn" onclick="openNewThreadForm()">+ New Message</button>
     </div>
     <div id="messagesContent"></div>
   </div>
@@ -2353,7 +2353,25 @@ async function sendMessage() {
 }
 
 function openNewThreadForm() {
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
   const el = document.getElementById('messagesContent');
+
+  if(!isCoach) {
+    const existing = THREADS.find(t=>t.kind==='individual' && t.athlete_id===CU.member_id);
+    if(existing) { openThread(existing.id); return; }
+    document.getElementById('msgScrSub').textContent = 'New message to Coaches';
+    el.innerHTML = `<div class="absence-form">
+      <div class="form-group">
+        <label class="pr-label">Message to Coaches</label>
+        <textarea class="form-textarea" id="newThreadBody" placeholder="Type your message..."></textarea>
+      </div>
+      <button class="submit-btn" onclick="createAthleteThread()">Send</button>
+      <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="buildMessages()">Cancel</button>
+      <div id="newThreadMsg" style="margin-top:10px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;color:#e05c5c;display:none"></div>
+    </div>`;
+    return;
+  }
+
   document.getElementById('msgScrSub').textContent = 'New message';
   const juniors = ATHLETES.filter(a=>a.role==='junior').sort((a,b)=>a.name.localeCompare(b.name));
   el.innerHTML = `<div class="absence-form">
@@ -2386,6 +2404,21 @@ function openNewThreadForm() {
     <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="buildMessages()">Cancel</button>
     <div id="newThreadMsg" style="margin-top:10px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;color:#e05c5c;display:none"></div>
   </div>`;
+}
+
+async function createAthleteThread() {
+  const body = document.getElementById('newThreadBody').value.trim();
+  const msgEl = document.getElementById('newThreadMsg');
+  if(!body) { msgEl.textContent='Message cannot be empty.'; msgEl.style.display='block'; return; }
+  const now = new Date().toISOString();
+  const thread = {id:crypto.randomUUID(), club:HRC_CLUB, kind:'individual', athlete_id:CU.member_id, group_tag:null, title:CU.name, created_by:CU.id, created_by_name:CU.name, created_at:now, last_message_at:now, last_message_preview:body.slice(0,80)};
+  const res = await supaInsert('hrc_threads', thread);
+  if(!res) { msgEl.textContent='Could not send — try again.'; msgEl.style.display='block'; return; }
+  THREADS.unshift(thread);
+  const message = {id:crypto.randomUUID(), thread_id:thread.id, club:HRC_CLUB, sender_id:CU.id, sender_name:CU.name, sender_role:CU.role, body, created_at:now};
+  await supaInsert('hrc_messages', message);
+  toast('Message sent to coaches');
+  openThread(thread.id);
 }
 
 function toggleThreadKind() {
