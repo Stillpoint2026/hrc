@@ -951,7 +951,7 @@ body {
         <div class="scr-title">Practice Schedule</div>
         <div class="scr-sub">Mon–Sat through August 11</div>
       </div>
-      <button class="race-lineup-btn coach-only" onclick="openAddSession()">+ Session</button>
+      <button class="race-lineup-btn coach-only" onclick="openSessionForm()">+ Session</button>
     </div>
     <div class="filter-strip" id="schedFilters"></div>
     <div id="sessList"></div>
@@ -1138,6 +1138,13 @@ body {
   </div>
 </div>
 
+<!-- SESSION EDIT MODAL -->
+<div class="modal-overlay" id="sessionModal">
+  <div class="modal">
+    <div id="sessionModalContent"></div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════
 // SUPABASE CONFIG
@@ -1259,7 +1266,13 @@ async function doSignIn() {
     });
     const data = await res.json();
     if(!res.ok||data.error){
-      errEl.textContent=data.error_description||'Sign in failed.';
+      const msg = data.error_description||data.msg||'Sign in failed.';
+      const isUnconfirmed = /confirm/i.test(msg) || data.error_code==='email_not_confirmed';
+      if(isUnconfirmed) {
+        errEl.innerHTML = msg+' <span style="text-decoration:underline;cursor:pointer" onclick="resendConfirmation(\''+email.replace(/'/g,"\\'")+'\')">Resend confirmation email</span>';
+      } else {
+        errEl.textContent = msg;
+      }
       errEl.style.display='block';
       document.getElementById('siBtnTxt').textContent='Sign In';
       return;
@@ -1305,7 +1318,7 @@ async function doSignUp() {
     if(!res.ok||data.error){errEl.textContent=data.error_description||'Signup failed.';errEl.style.display='block';return;}
     if(data.user&&!data.session){
       errEl.style.color='#4a9a6a';
-      errEl.textContent='Check your email to confirm your account, then sign in.';
+      errEl.innerHTML = 'Check your email to confirm your account, then sign in. <span style="text-decoration:underline;cursor:pointer" onclick="resendConfirmation(\''+email.replace(/'/g,"\\'")+'\')">Resend email</span>';
       errEl.style.display='block';
     }
   } catch(e){errEl.textContent='Connection error.';errEl.style.display='block';}
@@ -1316,6 +1329,19 @@ async function showForgot() {
   if(!email) return;
   await fetch(SUPA_URL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
   toast('Password reset email sent');
+}
+
+async function resendConfirmation(email) {
+  try {
+    await fetch(SUPA_URL+'/auth/v1/resend', {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({type:'signup', email})
+    });
+    toast('Confirmation email resent — check your inbox');
+  } catch(e) {
+    toast('Could not resend — try again shortly');
+  }
 }
 
 function signOut() {
@@ -1537,7 +1563,7 @@ function buildSchedule() {
     const time = s.time ? s.time.slice(0,5) : '—';
     const h = parseInt(time); const ampm = h<12?'AM':'PM';
     const t12 = h>12?`${h-12}:${time.slice(3)}`:(h===0?`12:${time.slice(3)}`:time);
-    html += `<div class="sess-card">
+    html += `<div class="sess-card"${isCoach?` style="cursor:pointer" onclick="openSessionForm('${s.id}')"`:''}>
       <div class="sess-hd">
         <div class="sess-time-block">
           <div class="sess-time">${t12}</div>
@@ -2603,15 +2629,93 @@ function toast(msg) {
   toastTimer = setTimeout(()=>el.classList.remove('show'), 2500);
 }
 
-function openAddSession() {
-  const name = prompt('Session name:'); if(!name) return;
-  const date = prompt('Date (YYYY-MM-DD):'); if(!date) return;
-  const time = prompt('Time (HH:MM):'); if(!time) return;
-  const type = prompt('Type (UT2/UT1/AT/TECH/MIXED):') || 'UT2';
-  const group = prompt('Group (U19/U17/All):') || 'All';
-  const notes = prompt('Notes (optional):') || '';
-  const record = {id:crypto.randomUUID(),club:HRC_CLUB,name,date,time,type:type.toUpperCase(),group,notes,max_athletes:30,created_at:new Date().toISOString()};
-  supaInsert('hrc_sessions', record).then(()=>{ SESSIONS.push(record); SESSIONS.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)); buildSchedule(); toast('Session added'); });
+function openSessionForm(id) {
+  const s = id ? SESSIONS.find(x=>x.id===id) : null;
+  document.getElementById('sessionModalContent').innerHTML = `
+    <div class="modal-hd">
+      <div class="modal-title">${s?'Edit Session':'New Session'}</div>
+      <button class="modal-close" onclick="closeSessionModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="pr-label">Session Name</label>
+        <input class="form-input" id="sessName" placeholder="e.g. Morning Row" value="${s?.name||''}">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="form-group" style="flex:1">
+          <label class="pr-label">Date</label>
+          <input class="form-input" type="date" id="sessDate" value="${s?.date||''}">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="pr-label">Time</label>
+          <input class="form-input" type="time" id="sessTime" value="${s?.time?s.time.slice(0,5):''}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Type</label>
+        <select class="form-select" id="sessType">
+          ${['UT2','UT1','AT','TECH','MIXED'].map(t=>`<option value="${t}" ${(s?.type||'UT2')===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Group</label>
+        <select class="form-select" id="sessGroup">
+          ${['All','U19','U17'].map(g=>`<option value="${g}" ${(s?.group||'All')===g?'selected':''}>${g}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Max Athletes</label>
+        <input class="form-input" type="number" id="sessMax" value="${s?.max_athletes||30}">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Notes</label>
+        <textarea class="form-textarea" id="sessNotes" placeholder="Optional">${s?.notes||''}</textarea>
+      </div>
+      <button class="submit-btn" onclick="saveSession('${s?.id||''}')">${s?'Save Changes':'Add Session'}</button>
+      ${s?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteSession('${s.id}')">Delete Session</button>`:''}
+      <div id="sessMsg" style="margin-top:10px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;color:#e05c5c;display:none"></div>
+    </div>`;
+  document.getElementById('sessionModal').classList.add('open');
+}
+
+function closeSessionModal() {
+  document.getElementById('sessionModal').classList.remove('open');
+}
+document.getElementById('sessionModal').addEventListener('click',function(e){
+  if(e.target===this) closeSessionModal();
+});
+
+async function saveSession(id) {
+  const name = document.getElementById('sessName').value.trim();
+  const date = document.getElementById('sessDate').value;
+  const time = document.getElementById('sessTime').value;
+  const type = document.getElementById('sessType').value;
+  const group = document.getElementById('sessGroup').value;
+  const max_athletes = parseInt(document.getElementById('sessMax').value) || 30;
+  const notes = document.getElementById('sessNotes').value.trim();
+  const msgEl = document.getElementById('sessMsg');
+  if(!name||!date||!time) { msgEl.textContent='Name, date, and time are required.'; msgEl.style.display='block'; return; }
+
+  if(id) {
+    const ok = await supaPatch('hrc_sessions', {id}, {name,date,time,type,group,max_athletes,notes});
+    if(ok) {
+      const s = SESSIONS.find(x=>x.id===id);
+      if(s) Object.assign(s,{name,date,time,type,group,max_athletes,notes});
+      SESSIONS.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+      toast('Session updated'); closeSessionModal(); buildSchedule();
+    } else { msgEl.textContent='Save failed — try again.'; msgEl.style.display='block'; }
+  } else {
+    const record = {id:crypto.randomUUID(),club:HRC_CLUB,name,date,time,type,group,notes,max_athletes,created_at:new Date().toISOString()};
+    const res = await supaInsert('hrc_sessions', record);
+    if(res) { SESSIONS.push(record); SESSIONS.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)); toast('Session added'); closeSessionModal(); buildSchedule(); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteSession(id) {
+  if(!confirm('Delete this session?')) return;
+  const ok = await supaDelete('hrc_sessions', {id});
+  if(ok) { SESSIONS = SESSIONS.filter(s=>s.id!==id); toast('Session deleted'); closeSessionModal(); buildSchedule(); }
 }
 
 function openAddAthlete() {
