@@ -1640,7 +1640,7 @@ function buildRoster() {
     const color = a.color || AVATAR_COLORS[Math.abs((a.name||'').length*7)%AVATAR_COLORS.length];
     const initials = a.initials || (a.name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     const ergScores = ERG_SCORES.filter(e=>e.athlete_id===a.id);
-    const bestErg = ergScores.length ? Math.min(...ergScores.filter(e=>e.test==='2k').map(e=>e.time_seconds||9999)).toString() : '—';
+    const bestErg = ergScores.length ? Math.min(...ergScores.filter(e=>is2kTest(e.test)).map(e=>e.time_seconds||9999)).toString() : '—';
     const attendance = SESSIONS.length ? Math.round((ABSENCES.filter(ab=>ab.athlete_id===a.id).length/Math.max(SESSIONS.length,1))*100) : '—';
     const groupBadge = a.group ? `<span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>` : '';
     return `<div class="athlete-card" onclick="openAthleteDetail('${a.id}')">
@@ -1879,7 +1879,7 @@ function switchCoachTab(tab) {
       const absCount = ABSENCES.filter(ab=>ab.athlete_id===a.id).length;
       const totalSess = Math.max(SESSIONS.length,1);
       const attRate = Math.round(((totalSess-absCount)/totalSess)*100);
-      const ergBest = ERG_SCORES.filter(e=>e.athlete_id===a.id&&e.test==='2k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+      const ergBest = ERG_SCORES.filter(e=>e.athlete_id===a.id&&is2kTest(e.test)).sort((x,y)=>x.time_seconds-y.time_seconds)[0];
       const ergStr = ergBest ? fmtTime(ergBest.time_seconds) : '—';
       const workoutCount = WORKOUTS.filter(w=>w.athlete_id===a.id).length;
       return `<div class="coach-athlete-row" onclick="openAthleteDetail('${a.id}')">
@@ -1909,7 +1909,7 @@ function switchCoachTab(tab) {
   } else if(tab==='erg') {
     el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Best 2k Times</div>`+
       ATHLETES.filter(a=>['junior','rower'].includes(a.role)).map(a=>{
-        const best = ERG_SCORES.filter(e=>e.athlete_id===a.id&&e.test==='2k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+        const best = ERG_SCORES.filter(e=>e.athlete_id===a.id&&is2kTest(e.test)).sort((x,y)=>x.time_seconds-y.time_seconds)[0];
         return `<div class="coach-athlete-row" onclick="openAthleteDetail('${a.id}')">
           <div class="flex-between">
             <div class="cah-name">${a.name}</div>
@@ -2281,6 +2281,10 @@ async function deleteBoat(id) {
 }
 
 // ── MESSAGING ──
+function is2kTest(test) {
+  return ['2k','3x2k','4x2k'].includes(test);
+}
+
 function timeAgo(iso) {
   const s = Math.floor((Date.now() - new Date(iso).getTime())/1000);
   if(s<60) return 'just now';
@@ -2819,7 +2823,7 @@ function openAthleteDetail(id) {
   const ergScores = ERG_SCORES.filter(e=>e.athlete_id===id).sort((x,y)=>new Date(y.date)-new Date(x.date));
   const workouts = WORKOUTS.filter(w=>w.athlete_id===id).sort((x,y)=>new Date(y.date)-new Date(x.date));
   const absences = ABSENCES.filter(ab=>ab.athlete_id===id);
-  const best2k = ergScores.filter(e=>e.test==='2k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+  const best2k = ergScores.filter(e=>is2kTest(e.test)).sort((x,y)=>x.time_seconds-y.time_seconds)[0];
   const attRate = Math.round(((Math.max(SESSIONS.length,1)-absences.length)/Math.max(SESSIONS.length,1))*100);
 
   document.getElementById('athleteModalContent').innerHTML = `
