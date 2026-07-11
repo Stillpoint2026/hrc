@@ -1601,7 +1601,7 @@ function buildSchedule() {
         <div class="sess-div"></div>
         <div class="sess-info">
           <div class="sess-name">${s.name}</div>
-          <div class="sess-meta">${s.type||''}${s.group?' · '+s.group:''}${s.max_athletes?' · Max '+s.max_athletes:''}</div>
+          <div class="sess-meta">${s.type||''}${s.group?' · '+s.group:''}${s.post_workout?' · Post: '+s.post_workout:''}${s.max_athletes?' · Max '+s.max_athletes:''}</div>
         </div>
         <div class="sess-type ${typeClass}">${s.type||''}</div>
       </div>
@@ -2977,6 +2977,13 @@ function openSessionForm(id) {
         <input class="form-input" type="number" id="sessMax" value="${s?.max_athletes||30}">
       </div>
       <div class="form-group">
+        <label class="pr-label">Post Workout</label>
+        <select class="form-select" id="sessPostWorkout">
+          <option value="" ${!s?.post_workout?'selected':''}>None</option>
+          ${['Core','Mobility','P90','Seals','Boxes','Circuits'].map(pw=>`<option value="${pw}" ${s?.post_workout===pw?'selected':''}>${pw}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
         <label class="pr-label">Workout Details <span style="color:var(--text3);font-weight:300">(visible to everyone)</span></label>
         <textarea class="form-textarea" id="sessNotes" placeholder="e.g. Steady State r18, 3x2k pieces, etc.">${s?.notes||''}</textarea>
       </div>
@@ -3007,19 +3014,20 @@ async function saveSession(id) {
   const max_athletes = parseInt(document.getElementById('sessMax').value) || 30;
   const notes = document.getElementById('sessNotes').value.trim();
   const coach_notes = document.getElementById('sessCoachNotes').value.trim();
+  const post_workout = document.getElementById('sessPostWorkout').value;
   const msgEl = document.getElementById('sessMsg');
   if(!name||!date||!time) { msgEl.textContent='Name, date, and time are required.'; msgEl.style.display='block'; return; }
 
   if(id) {
-    const ok = await supaPatch('hrc_sessions', {id}, {name,date,time,type,group,max_athletes,notes,coach_notes});
+    const ok = await supaPatch('hrc_sessions', {id}, {name,date,time,type,group,max_athletes,notes,coach_notes,post_workout});
     if(ok) {
       const s = SESSIONS.find(x=>x.id===id);
-      if(s) Object.assign(s,{name,date,time,type,group,max_athletes,notes,coach_notes});
+      if(s) Object.assign(s,{name,date,time,type,group,max_athletes,notes,coach_notes,post_workout});
       SESSIONS.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
       toast('Session updated'); closeSessionModal(); buildSchedule();
     } else { msgEl.textContent='Save failed — try again.'; msgEl.style.display='block'; }
   } else {
-    const record = {id:crypto.randomUUID(),club:HRC_CLUB,name,date,time,type,group,notes,coach_notes,max_athletes,created_at:new Date().toISOString()};
+    const record = {id:crypto.randomUUID(),club:HRC_CLUB,name,date,time,type,group,notes,coach_notes,post_workout,max_athletes,created_at:new Date().toISOString()};
     const res = await supaInsert('hrc_sessions', record);
     if(res) { SESSIONS.push(record); SESSIONS.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)); toast('Session added'); closeSessionModal(); buildSchedule(); }
     else { msgEl.textContent='Save failed — try again.'; msgEl.style.display='block'; }
