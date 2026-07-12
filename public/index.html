@@ -2526,7 +2526,7 @@ function renderThreadList() {
     return;
   }
   el.innerHTML = threads.map(t=>{
-    const badge = t.kind==='individual' ? 'Direct' : (t.group_tag==='All' ? 'All Squad' : t.group_tag);
+    const badge = t.kind==='coach' ? 'Staff' : t.kind==='individual' ? 'Direct' : (t.group_tag==='All' ? 'All Squad' : t.group_tag);
     const when = t.last_message_at ? timeAgo(t.last_message_at) : '';
     return `<div class="card" style="cursor:pointer" onclick="openThread('${t.id}')">
       <div class="flex-between">
@@ -2621,6 +2621,7 @@ function openNewThreadForm() {
       <select class="form-select" id="newThreadKind" onchange="toggleThreadKind()">
         <option value="individual">Individual Athlete</option>
         <option value="group">Group / Squad</option>
+        <option value="coach">Coaching Staff</option>
       </select>
     </div>
     <div class="form-group" id="threadIndivWrap">
@@ -2673,6 +2674,26 @@ async function createThread() {
   const body = document.getElementById('newThreadBody').value.trim();
   const msgEl = document.getElementById('newThreadMsg');
   if(!body) { msgEl.textContent='Message cannot be empty.'; msgEl.style.display='block'; return; }
+
+  if(kind==='coach') {
+    const now = new Date().toISOString();
+    const existing = THREADS.find(t=>t.kind==='coach');
+    if(existing) {
+      const message = {id:crypto.randomUUID(), thread_id:existing.id, club:HRC_CLUB, sender_id:CU.id, sender_name:CU.name, sender_role:CU.role, body, created_at:now};
+      await supaInsert('hrc_messages', message);
+      await supaPatch('hrc_threads', {id: existing.id}, {last_message_at: now, last_message_preview: body.slice(0,80)});
+      existing.last_message_at = now; existing.last_message_preview = body.slice(0,80);
+      toast('Message sent'); openThread(existing.id); return;
+    }
+    const thread = {id:crypto.randomUUID(), club:HRC_CLUB, kind:'coach', athlete_id:null, group_tag:null, title:'Coaching Staff', created_by:CU.id, created_by_name:CU.name, created_at:now, last_message_at:now, last_message_preview:body.slice(0,80)};
+    const res = await supaInsert('hrc_threads', thread);
+    if(!res) { msgEl.textContent='Could not create thread — try again.'; msgEl.style.display='block'; return; }
+    THREADS.unshift(thread);
+    const message = {id:crypto.randomUUID(), thread_id:thread.id, club:HRC_CLUB, sender_id:CU.id, sender_name:CU.name, sender_role:CU.role, body, created_at:now};
+    await supaInsert('hrc_messages', message);
+    toast('Message sent'); openThread(thread.id); return;
+  }
+
   let athlete_id=null, group_tag=null, title='';
   if(kind==='individual') {
     athlete_id = document.getElementById('newThreadAthlete').value;
