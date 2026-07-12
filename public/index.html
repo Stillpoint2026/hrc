@@ -1027,13 +1027,14 @@ body {
     </div>
     <div class="section">
       <div class="section-label">Regatta</div>
-      <select class="form-select" id="lineupRace" onchange="onLineupRaceChange()">
+      <select class="form-select" id="lineupRace" onchange="editingLineupId=null; onLineupRaceChange()">
         <option value="practice">Practice</option>
         <option>Philadelphia Youth Regatta — Jul 18</option>
         <option>Independence Day Regatta — Jul 24–26</option>
         <option>Royal Canadian Henley — Aug 4–9</option>
       </select>
       <input class="form-input" id="lineupDate" type="date" style="margin-top:10px" onchange="buildLineupBoard()">
+      <input class="form-input" id="lineupBoatLabel" type="text" placeholder="Boat label (optional, e.g. 1st Boat, Varsity)" style="margin-top:10px">
     </div>
     <div class="section">
       <div class="section-label">Boat Class</div>
@@ -1046,6 +1047,7 @@ body {
     <div id="lineupBoard"></div>
     <div class="p16">
       <button class="submit-btn coach-only" onclick="saveLineup()">Save Lineup</button>
+      <button class="submit-btn coach-only" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="newLineup()">+ New Boat (this practice)</button>
     </div>
     <div class="section">
       <div class="section-label">Saved Lineups</div>
@@ -1269,6 +1271,7 @@ let athleteTab = 'noticeboard';
 let parentTab = 'updates';
 let lineupBoatClass = 'eight';
 let lineupSquadFilter = 'All';
+let editingLineupId = null;
 let absSessionVal = 'AM';
 let lineupData = {};
 
@@ -1749,6 +1752,7 @@ function setLineupSquad(g) { lineupSquadFilter = g; buildLineup(); }
 function renderSavedLineups() {
   const el = document.getElementById('savedLineups');
   if(!el) return;
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
   if(!LINEUPS.length) {
     el.innerHTML = '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No saved lineups yet.</div>';
     return;
@@ -1762,10 +1766,13 @@ function renderSavedLineups() {
     return `<div class="card" style="cursor:pointer" onclick="loadSavedLineup('${l.id}')">
       <div class="flex-between">
         <div>
-          <div class="card-title">${l.race||'—'} · ${bc?bc.label:l.boat_class}${l.boat_name?' · '+l.boat_name:''}</div>
+          <div class="card-title">${l.race||'—'} · ${bc?bc.label:l.boat_class}${l.boat_label?' · '+l.boat_label:''}${l.boat_name?' · '+l.boat_name:''}</div>
           <div class="card-sub">${filled}/${seats.length||'—'} seats${l.cox?' + cox':''} · saved ${dt}</div>
         </div>
-        <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase">Load</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase">Load</div>
+          ${isCoach?`<div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase" onclick="deleteLineup('${l.id}', event)">Delete</div>`:''}
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1791,10 +1798,13 @@ function loadSavedLineup(id) {
   lineupData[key+'|cox'] = l.cox||null;
   lineupData[key+'|boat'] = l.boat_name||null;
   buildLineup();
+  const labelEl = document.getElementById('lineupBoatLabel');
+  if(labelEl) labelEl.value = l.boat_label||'';
+  editingLineupId = l.id;
   toast('Lineup loaded');
 }
 
-function setBoatClass(cls) { lineupBoatClass=cls; buildLineup(); }
+function setBoatClass(cls) { lineupBoatClass=cls; editingLineupId=null; buildLineup(); }
 
 function buildLineupBoard() {
   const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
@@ -1931,21 +1941,60 @@ async function saveLineup() {
   const race = lineupRaceLabel();
   const key = race+'|'+lineupBoatClass;
   const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
+  const boat_label = document.getElementById('lineupBoatLabel')?.value.trim() || null;
   const record = {
     club: HRC_CLUB,
     race: race,
     boat_class: lineupBoatClass,
+    boat_label: boat_label,
     seats: JSON.stringify(lineupData[key]),
     cox: lineupData[key+'|cox']||null,
     boat_name: lineupData[key+'|boat']||null,
     created_by: CU.id,
     updated_at: new Date().toISOString()
   };
-  const saved = await supaInsert('hrc_lineups', record);
-  if(saved && saved.length) LINEUPS.unshift(saved[0]);
-  else LINEUPS.unshift({...record, id: crypto.randomUUID()});
-  renderSavedLineups();
-  toast('Lineup saved');
+
+  if(editingLineupId) {
+    const ok = await supaPatch('hrc_lineups', {id: editingLineupId}, record);
+    if(ok) {
+      const idx = LINEUPS.findIndex(l=>l.id===editingLineupId);
+      if(idx>=0) LINEUPS[idx] = {...LINEUPS[idx], ...record};
+      renderSavedLineups();
+      toast('Lineup updated');
+    } else { toast('Update failed — try again'); }
+  } else {
+    const saved = await supaInsert('hrc_lineups', record);
+    if(saved && saved.length) { LINEUPS.unshift(saved[0]); editingLineupId = saved[0].id; }
+    else { const rec = {...record, id: crypto.randomUUID()}; LINEUPS.unshift(rec); editingLineupId = rec.id; }
+    renderSavedLineups();
+    toast('Lineup saved');
+  }
+}
+
+function newLineup() {
+  const race = lineupRaceLabel();
+  const key = race+'|'+lineupBoatClass;
+  const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
+  lineupData[key] = Array(bc?.seats||8).fill(null);
+  lineupData[key+'|cox'] = null;
+  lineupData[key+'|boat'] = null;
+  editingLineupId = null;
+  const labelEl = document.getElementById('lineupBoatLabel');
+  if(labelEl) labelEl.value = '';
+  buildLineupBoard();
+  toast('Starting a new boat — give it a label, build it, then Save');
+}
+
+async function deleteLineup(id, event) {
+  if(event) event.stopPropagation();
+  if(!confirm('Delete this saved lineup?')) return;
+  const ok = await supaDelete('hrc_lineups', {id});
+  if(ok) {
+    LINEUPS = LINEUPS.filter(l=>l.id!==id);
+    if(editingLineupId===id) editingLineupId = null;
+    renderSavedLineups();
+    toast('Lineup deleted');
+  } else { toast('Delete failed — try again'); }
 }
 
 function openLineupForRace(race) {
