@@ -1039,6 +1039,10 @@ body {
       <div class="section-label">Boat Class</div>
       <div class="filter-strip" style="padding:0;border:none" id="boatClassFilter"></div>
     </div>
+    <div class="section">
+      <div class="section-label">Squad</div>
+      <div class="filter-strip" style="padding:0;border:none" id="lineupSquadFilter"></div>
+    </div>
     <div id="lineupBoard"></div>
     <div class="p16">
       <button class="submit-btn coach-only" onclick="saveLineup()">Save Lineup</button>
@@ -1264,6 +1268,7 @@ let coachTab = 'overview';
 let athleteTab = 'noticeboard';
 let parentTab = 'updates';
 let lineupBoatClass = 'eight';
+let lineupSquadFilter = 'All';
 let absSessionVal = 'AM';
 let lineupData = {};
 
@@ -1729,11 +1734,17 @@ function buildLineup() {
   document.getElementById('boatClassFilter').innerHTML = classes.map(c=>
     `<div class="fpill${c.id===lineupBoatClass?' active':''}" onclick="setBoatClass('${c.id}')">${c.label}</div>`
   ).join('');
+  const squads = [{id:'All',label:'All'},{id:'U19',label:'U19'},{id:'U17',label:'U17'}];
+  document.getElementById('lineupSquadFilter').innerHTML = squads.map(s=>
+    `<div class="fpill${s.id===lineupSquadFilter?' active':''}" onclick="setLineupSquad('${s.id}')">${s.label}</div>`
+  ).join('');
   const dateEl = document.getElementById('lineupDate');
   if(dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
   onLineupRaceChange();
   renderSavedLineups();
 }
+
+function setLineupSquad(g) { lineupSquadFilter = g; buildLineup(); }
 
 function renderSavedLineups() {
   const el = document.getElementById('savedLineups');
@@ -1872,7 +1883,8 @@ function assignedElsewhereInRace(race, excludeKey, excludeIdx) {
 function assignSeat(key, idx) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
   const race = lineupRaceLabel();
-  const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  let all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  if(lineupSquadFilter!=='All') all = all.filter(a=>a.group===lineupSquadFilter);
   const taken = assignedElsewhereInRace(race, key, idx);
   const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal) && !taken.has(a.name.toLowerCase()));
   const absentCount = all.filter(a=>absentOn(a.id, lineupDateVal)).length;
@@ -1888,7 +1900,8 @@ function assignSeat(key, idx) {
 function assignCox(key) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
   const race = lineupRaceLabel();
-  const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  let all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  if(lineupSquadFilter!=='All') all = all.filter(a=>a.group===lineupSquadFilter);
   const taken = assignedElsewhereInRace(race, key, -1);
   const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal) && !taken.has(a.name.toLowerCase()));
   const absentCount = all.filter(a=>absentOn(a.id, lineupDateVal)).length;
