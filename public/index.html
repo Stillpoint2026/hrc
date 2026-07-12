@@ -1486,7 +1486,15 @@ async function linkMemberRecord() {
   }
   if(me) {
     CU.member_id = me.id;
-    if(!['head-coach','asst-coach','admin'].includes(CU.role)) CU.role = me.role || CU.role;
+    const authIsCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+    if(!authIsCoach) {
+      CU.role = me.role || CU.role;
+    } else if(me.role !== CU.role) {
+      // Auth account is a coach but the roster row is stale (e.g. they logged in
+      // before their role was flipped) — re-sync the roster to match auth.
+      await supaPatch('hrc_members', {id: me.id}, {role: CU.role});
+      me.role = CU.role;
+    }
   } else {
     // Not on the roster yet — create a member row (athlete or coach)
     const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
