@@ -1158,6 +1158,13 @@ body {
   </div>
 </div>
 
+<!-- SHIFT ASSIGN MODAL -->
+<div class="modal-overlay" id="shiftModal">
+  <div class="modal">
+    <div id="shiftModalContent"></div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════
 // SUPABASE CONFIG
@@ -2587,13 +2594,13 @@ function renderShifts() {
       const rec = SHIFTS.find(x=>x.date===dateStr && x.shift===s.id);
       const names = rec?.coach_names || '';
       const mine = names.toLowerCase().includes((myName||'').toLowerCase());
-      html += `<div class="card" style="margin:0 16px 8px;${mine?'border-color:var(--crimson);':''}" ${isHead?`onclick="assignShift('${dateStr}','${s.id}')"`:''}>
+      html += `<div class="card" style="margin:0 16px 8px;cursor:pointer;${mine?'border-color:var(--crimson);':''}" onclick="handleShiftTap('${dateStr}','${s.id}')">
         <div class="flex-between">
           <div>
             <div class="card-title" style="font-size:14px">${s.label} ${mine?'<span class="badge" style="background:var(--crimson-light);color:var(--crimson)">You</span>':''}</div>
             <div class="card-sub">${s.time}</div>
           </div>
-          <div style="text-align:right;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:${names?'var(--text2)':'var(--text3)'}">${names||(isHead?'Tap to assign':'Unassigned')}</div>
+          <div style="text-align:right;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:${names?'var(--text2)':'var(--text3)'}">${names||'Tap to sign up'}</div>
         </div>
       </div>`;
     });
@@ -2606,23 +2613,22 @@ function shiftWeek(dir) {
   renderShifts();
 }
 
-async function assignShift(dateStr, shiftId) {
-  const coaches = ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role));
-  const listing = coaches.map((c,i)=>`${i+1}. ${c.name}`).join('\n');
-  const input = prompt('Assign coaches (comma-separated numbers or names):\n'+listing+'\n\nLeave blank to clear.');
-  if(input===null) return;
-  let names = '';
-  if(input.trim()){
-    names = input.split(',').map(tok=>{
-      tok = tok.trim();
-      const n = parseInt(tok);
-      if(!isNaN(n) && coaches[n-1]) return coaches[n-1].name;
-      const m = coaches.find(c=>c.name.toLowerCase().includes(tok.toLowerCase()));
-      return m ? m.name : tok;
-    }).filter(Boolean).join(', ');
-  }
+function handleShiftTap(dateStr, shiftId) {
+  const isHead = CU.role==='head-coach' || CU.role==='admin';
+  if(isHead) { openShiftAssignModal(dateStr, shiftId); }
+  else { toggleMyShift(dateStr, shiftId); }
+}
+
+async function toggleMyShift(dateStr, shiftId) {
+  const myName = (ATHLETES.find(a=>a.id===CU.member_id)?.name)||CU.name;
   const existing = SHIFTS.find(x=>x.date===dateStr && x.shift===shiftId);
-  if(existing){
+  let list = existing?.coach_names ? existing.coach_names.split(',').map(n=>n.trim()).filter(Boolean) : [];
+  const already = list.some(n=>n.toLowerCase()===myName.toLowerCase());
+  if(already) { list = list.filter(n=>n.toLowerCase()!==myName.toLowerCase()); }
+  else { list.push(myName); }
+  const names = list.join(', ');
+
+  if(existing) {
     await supaPatch('hrc_shifts', {id: existing.id}, {coach_names: names});
     existing.coach_names = names;
   } else {
@@ -2630,6 +2636,53 @@ async function assignShift(dateStr, shiftId) {
     await supaInsert('hrc_shifts', rec);
     SHIFTS.push(rec);
   }
+  renderShifts();
+  toast(already ? "You're off this shift" : "You're signed up for this shift");
+}
+
+function openShiftAssignModal(dateStr, shiftId) {
+  const slot = SHIFT_PATTERN.find(s=>s.id===shiftId);
+  const existing = SHIFTS.find(x=>x.date===dateStr && x.shift===shiftId);
+  const current = existing?.coach_names ? existing.coach_names.split(',').map(n=>n.trim()).filter(Boolean) : [];
+  const coaches = ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role)).sort((a,b)=>a.name.localeCompare(b.name));
+
+  document.getElementById('shiftModalContent').innerHTML = `
+    <div class="modal-hd">
+      <div class="modal-title">${slot?slot.label:'Shift'} — ${dateStr}</div>
+      <button class="modal-close" onclick="closeShiftModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      ${coaches.map(c=>`
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2);font-family:-apple-system,sans-serif;font-weight:300;font-size:14px;color:var(--text)">
+          <input type="checkbox" class="shift-coach-cb" value="${c.name.replace(/"/g,'&quot;')}" ${current.some(n=>n.toLowerCase()===c.name.toLowerCase())?'checked':''} style="width:18px;height:18px">
+          ${c.name}
+        </label>`).join('')}
+      <button class="submit-btn" style="margin-top:14px" onclick="saveShiftAssignment('${dateStr}','${shiftId}')">Save</button>
+      <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="closeShiftModal()">Cancel</button>
+    </div>`;
+  document.getElementById('shiftModal').classList.add('open');
+}
+
+function closeShiftModal() {
+  document.getElementById('shiftModal').classList.remove('open');
+}
+document.getElementById('shiftModal').addEventListener('click', function(e){
+  if(e.target===this) closeShiftModal();
+});
+
+async function saveShiftAssignment(dateStr, shiftId) {
+  const checked = Array.from(document.querySelectorAll('.shift-coach-cb:checked')).map(cb=>cb.value);
+  const names = checked.join(', ');
+  const existing = SHIFTS.find(x=>x.date===dateStr && x.shift===shiftId);
+  if(existing) {
+    await supaPatch('hrc_shifts', {id: existing.id}, {coach_names: names});
+    existing.coach_names = names;
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, date: dateStr, shift: shiftId, coach_names: names, created_at: new Date().toISOString()};
+    await supaInsert('hrc_shifts', rec);
+    SHIFTS.push(rec);
+  }
+  closeShiftModal();
   renderShifts();
   toast('Shift updated');
 }
