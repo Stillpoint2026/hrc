@@ -1202,6 +1202,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const HRC_CLUB = 'Hawk Rowing Club';
 const HRC_INVITE = 'HRC2026';
 const HRC_COACH_INVITE = 'HRCCOACH26';
+const HRC_SITE_URL = 'https://hawkrowingclub.org';
 
 function supaHeaders(token) {
   const t = token || getToken();
@@ -1373,10 +1374,10 @@ async function doSignUp() {
     if(coachCode!==HRC_COACH_INVITE){errEl.textContent='Coach access code not recognised — check with your head coach.';errEl.style.display='block';return;}
   }
   try {
-    const res = await fetch(SUPA_URL+'/auth/v1/signup', {
+    const res = await fetch(SUPA_URL+'/auth/v1/signup?redirect_to='+encodeURIComponent(HRC_SITE_URL), {
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email,password:pass,data:{name,role,club:HRC_CLUB,clubs:[HRC_CLUB],invite_code:code,account_type:'club',tos_accepted:true,tos_accepted_at:new Date().toISOString()}})
+      body:JSON.stringify({email,password:pass,data:{name,role,club:HRC_CLUB,clubs:[HRC_CLUB],invite_code:code,account_type:'club',tos_accepted:true,tos_accepted_at:new Date().toISOString()},options:{email_redirect_to:HRC_SITE_URL,redirect_to:HRC_SITE_URL}})
     });
     const data = await res.json();
     if(!res.ok||data.error){errEl.textContent=data.error_description||'Signup failed.';errEl.style.display='block';return;}
@@ -1397,10 +1398,10 @@ async function showForgot() {
 
 async function resendConfirmation(email) {
   try {
-    await fetch(SUPA_URL+'/auth/v1/resend', {
+    await fetch(SUPA_URL+'/auth/v1/resend?redirect_to='+encodeURIComponent(HRC_SITE_URL), {
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({type:'signup', email})
+      body:JSON.stringify({type:'signup', email, options:{email_redirect_to:HRC_SITE_URL,redirect_to:HRC_SITE_URL}})
     });
     toast('Confirmation email resent — check your inbox');
   } catch(e) {
