@@ -829,7 +829,8 @@ body {
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
   </div>
   <div class="nav-right">
-    <div class="nav-user" id="navUser" onclick="go('profile')">—</div>
+    <div class="nav-user" id="navUser">—</div>
+    <div class="nav-user" style="cursor:pointer;color:var(--text3);margin-left:14px" onclick="confirmSignOut()">Sign Out</div>
   </div>
 </nav>
 
@@ -1366,6 +1367,10 @@ async function resendConfirmation(email) {
   } catch(e) {
     toast('Could not resend — try again shortly');
   }
+}
+
+function confirmSignOut() {
+  if(confirm('Sign out of Hawk Rowing Club?')) signOut();
 }
 
 function signOut() {
