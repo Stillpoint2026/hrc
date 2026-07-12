@@ -877,10 +877,15 @@ body {
       <label class="pr-label">Invite Code</label>
       <input class="pr-input" id="suCode" type="text" placeholder="From your coach" autocomplete="off" style="font-family:'Courier New',monospace;text-transform:uppercase">
       <label class="pr-label">I am a</label>
-      <select class="form-select" id="suRole" style="margin-bottom:14px">
+      <select class="form-select" id="suRole" style="margin-bottom:14px" onchange="toggleCoachCode()">
         <option value="junior">Athlete (U19 / U17)</option>
         <option value="parent">Parent / Guardian</option>
+        <option value="asst-coach">Coach</option>
       </select>
+      <div id="suCoachCodeWrap" style="display:none">
+        <label class="pr-label">Coach Access Code</label>
+        <input class="pr-input" id="suCoachCode" type="text" placeholder="Coach-only code" autocomplete="off" style="font-family:'Courier New',monospace;text-transform:uppercase;margin-bottom:14px">
+      </div>
       <button class="pr-btn" onclick="doSignUp()">Create Account</button>
     </div>
   </div>
@@ -1182,6 +1187,7 @@ const SUPA_URL = 'https://dbaayypiilwnrbpusiko.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRiYWF5eXBpaWx3bnJicHVzaWtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTg5NzAsImV4cCI6MjA4OTMzNDk3MH0.0D15NkY1PK47Udz7gmPRjXUUDzIryn0MRV4f3tDS6Ls';
 const HRC_CLUB = 'Hawk Rowing Club';
 const HRC_INVITE = 'HRC2026';
+const HRC_COACH_INVITE = 'HRCCOACH26';
 
 function supaHeaders(token) {
   const t = token || getToken();
@@ -1330,6 +1336,11 @@ async function doSignIn() {
   }
 }
 
+function toggleCoachCode() {
+  const isCoach = document.getElementById('suRole').value === 'asst-coach';
+  document.getElementById('suCoachCodeWrap').style.display = isCoach ? 'block' : 'none';
+}
+
 async function doSignUp() {
   const name = document.getElementById('suName').value.trim();
   const email = document.getElementById('suEmail').value.trim();
@@ -1341,6 +1352,10 @@ async function doSignUp() {
   if(!name||!email||!pass){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
   if(pass.length<8){errEl.textContent='Password must be 8+ characters.';errEl.style.display='block';return;}
   if(code!==HRC_INVITE){errEl.textContent='Invite code not recognised — check with your coach.';errEl.style.display='block';return;}
+  if(role==='asst-coach') {
+    const coachCode = document.getElementById('suCoachCode').value.trim().toUpperCase();
+    if(coachCode!==HRC_COACH_INVITE){errEl.textContent='Coach access code not recognised — check with your head coach.';errEl.style.display='block';return;}
+  }
   try {
     const res = await fetch(SUPA_URL+'/auth/v1/signup', {
       method:'POST',
@@ -1509,7 +1524,7 @@ async function linkMemberRecord() {
     const initials = (CU.name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
     const color = AVATAR_COLORS[Math.abs((CU.name||'').length*7)%AVATAR_COLORS.length];
     const rec = {id: crypto.randomUUID(), club: HRC_CLUB, name: CU.name, email: CU.email,
-      role: isCoachRole ? (CU.role==='head-coach'?'head-coach':'asst-coach') : 'junior',
+      role: isCoachRole ? (CU.role==='head-coach'?'head-coach':'asst-coach') : (CU.role || 'junior'),
       initials, color, sweep: true, scull: false, side: '', supabase_uid: CU.id,
       created_at: new Date().toISOString()};
     const res = await supaInsert('hrc_members', rec);
@@ -3030,7 +3045,7 @@ function openAthleteDetail(id) {
   document.getElementById('athleteModalContent').innerHTML = `
     <div class="detail-hero" style="background:${color}">
       <div class="detail-name">${a.name}</div>
-      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':'Rower'}</div>
+      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':'Rower'}</div>
     </div>
     <div class="stat-grid">
       <div class="stat-cell"><div class="stat-val">${best2k?fmtTime(best2k.time_seconds):'—'}</div><div class="stat-lbl">Best 2k</div></div>
