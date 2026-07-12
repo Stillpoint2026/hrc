@@ -1516,9 +1516,12 @@ async function linkMemberRecord() {
   if(!CU) return;
   // Already linked?
   let me = ATHLETES.find(a => a.supabase_uid === CU.id);
-  if(!me) {
+  if(!me && CU.role === 'junior') {
+    // Only link to a pre-existing roster placeholder when this person is
+    // signing up AS an athlete. A parent or coach with the same name as an
+    // athlete must never be merged into that athlete's row.
     const norm = s => (s||'').toLowerCase().replace(/[^a-z ]/g,'').trim();
-    me = ATHLETES.find(a => !a.supabase_uid && norm(a.name) === norm(CU.name));
+    me = ATHLETES.find(a => !a.supabase_uid && a.role==='junior' && norm(a.name) === norm(CU.name));
     if(me) {
       await supaPatch('hrc_members', {id: me.id}, {supabase_uid: CU.id, email: me.email || CU.email});
       me.supabase_uid = CU.id;
