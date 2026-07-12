@@ -1070,7 +1070,8 @@ body {
       <div class="scr-sub">Training resources & performance log</div>
     </div>
     <div class="tab-row">
-      <div class="tab active" onclick="switchAthleteTab('log')">Log Workout</div>
+      <div class="tab active" onclick="switchAthleteTab('noticeboard')">Notice Board</div>
+      <div class="tab" onclick="switchAthleteTab('log')">Log Workout</div>
       <div class="tab" onclick="switchAthleteTab('erg')">Erg Scores</div>
       <div class="tab" onclick="switchAthleteTab('nutrition')">Nutrition</div>
       <div class="tab" onclick="switchAthleteTab('lifting')">Lifting</div>
@@ -1254,7 +1255,7 @@ let currentScreen = 'home';
 let rosterFilter = 'all';
 let schedFilter = 'all';
 let coachTab = 'overview';
-let athleteTab = 'log';
+let athleteTab = 'noticeboard';
 let parentTab = 'updates';
 let lineupBoatClass = 'eight';
 let absSessionVal = 'AM';
@@ -2091,7 +2092,20 @@ function switchAthleteTab(tab) {
   document.querySelectorAll('#scr-athlete .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().replace(' ','')===tab));
   const el = document.getElementById('athleteTabContent');
 
-  if(tab==='log') {
+  if(tab==='noticeboard') {
+    const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+    const posted = ANNOUNCEMENTS.map(a=>{
+      const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      return `<div class="announcement-card">
+        <div class="ann-date">${a.title||'Notice'} · ${dt}${a.posted_by_name?' · '+a.posted_by_name:''}</div>
+        <div class="ann-body">${a.body||''}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="height:12px"></div>
+      ${isCoach?`<div style="padding:0 16px 12px"><button class="race-lineup-btn" onclick="openAddAnnouncement()">+ Post Notice</button></div>`:''}
+      ${posted||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No notices posted yet.</div>'}`;
+
+  } else if(tab==='log') {
     el.innerHTML = `<div class="absence-form">
       <div class="form-group">
         <label class="pr-label">Date</label>
@@ -2795,7 +2809,8 @@ async function openAddAnnouncement() {
   const rec = {club:HRC_CLUB,title,body,posted_by:CU.id,posted_by_name:CU.name,created_at:new Date().toISOString()};
   await supaInsert('hrc_announcements', rec);
   ANNOUNCEMENTS.unshift(rec);
-  switchParentTab('updates');
+  if(currentScreen==='athlete') switchAthleteTab('noticeboard');
+  else switchParentTab('updates');
   toast('Notice posted');
 }
 
