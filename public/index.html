@@ -820,10 +820,10 @@ body {
     <div class="nt active" data-s="home" onclick="go('home')">Home</div>
     <div class="nt" data-s="schedule" onclick="go('schedule')">Schedule</div>
     <div class="nt" data-s="races" onclick="go('races')">Races</div>
-    <div class="nt" data-s="roster" onclick="go('roster')">Roster</div>
-    <div class="nt" data-s="lineup" onclick="go('lineup')">Lineup</div>
+    <div class="nt hide-from-parent" data-s="roster" onclick="go('roster')">Roster</div>
+    <div class="nt hide-from-parent" data-s="lineup" onclick="go('lineup')">Lineup</div>
     <div class="nt coach-only" data-s="coach" onclick="go('coach')">Coach Hub</div>
-    <div class="nt" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
+    <div class="nt hide-from-parent" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
@@ -877,7 +877,7 @@ body {
       <label class="pr-label">Invite Code</label>
       <input class="pr-input" id="suCode" type="text" placeholder="From your coach" autocomplete="off" style="font-family:'Courier New',monospace;text-transform:uppercase">
       <label class="pr-label">I am a</label>
-      <select class="form-select" id="suRole" style="margin-bottom:14px" onchange="toggleCoachCode()">
+      <select class="form-select" id="suRole" style="margin-bottom:14px" onchange="toggleRoleCode()">
         <option value="junior">Athlete (U19 / U17)</option>
         <option value="parent">Parent / Guardian</option>
         <option value="asst-coach">Coach</option>
@@ -885,6 +885,10 @@ body {
       <div id="suCoachCodeWrap" style="display:none">
         <label class="pr-label">Coach Access Code</label>
         <input class="pr-input" id="suCoachCode" type="text" placeholder="Coach-only code" autocomplete="off" style="font-family:'Courier New',monospace;text-transform:uppercase;margin-bottom:14px">
+      </div>
+      <div id="suParentCodeWrap" style="display:none">
+        <label class="pr-label">Parent Access Code</label>
+        <input class="pr-input" id="suParentCode" type="text" placeholder="Parent-only code" autocomplete="off" style="font-family:'Courier New',monospace;text-transform:uppercase;margin-bottom:14px">
       </div>
       <button class="pr-btn" onclick="doSignUp()">Create Account</button>
     </div>
@@ -927,7 +931,7 @@ body {
         <div class="ql-label">Today</div>
         <div class="ql-title">Practice Schedule</div>
       </div>
-      <div class="ql" onclick="go('lineup')">
+      <div class="ql hide-from-parent" onclick="go('lineup')">
         <div class="ql-label">Boats</div>
         <div class="ql-title">Lineups</div>
       </div>
@@ -935,11 +939,11 @@ body {
         <div class="ql-label">Summer</div>
         <div class="ql-title">Race Calendar</div>
       </div>
-      <div class="ql" onclick="go('roster')">
+      <div class="ql hide-from-parent" onclick="go('roster')">
         <div class="ql-label">Club</div>
         <div class="ql-title">Roster</div>
       </div>
-      <div class="ql" onclick="go('athlete')">
+      <div class="ql hide-from-parent" onclick="go('athlete')">
         <div class="ql-label">Resources</div>
         <div class="ql-title">Athlete Hub</div>
       </div>
@@ -1202,6 +1206,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const HRC_CLUB = 'Hawk Rowing Club';
 const HRC_INVITE = 'HRC2026';
 const HRC_COACH_INVITE = 'HRCCOACH26';
+const HRC_PARENT_INVITE = 'HRCPARENT26';
 const HRC_SITE_URL = 'https://hawkrowingclub.org';
 
 function supaHeaders(token) {
@@ -1353,9 +1358,10 @@ async function doSignIn() {
   }
 }
 
-function toggleCoachCode() {
-  const isCoach = document.getElementById('suRole').value === 'asst-coach';
-  document.getElementById('suCoachCodeWrap').style.display = isCoach ? 'block' : 'none';
+function toggleRoleCode() {
+  const role = document.getElementById('suRole').value;
+  document.getElementById('suCoachCodeWrap').style.display = role === 'asst-coach' ? 'block' : 'none';
+  document.getElementById('suParentCodeWrap').style.display = role === 'parent' ? 'block' : 'none';
 }
 
 async function doSignUp() {
@@ -1372,6 +1378,10 @@ async function doSignUp() {
   if(role==='asst-coach') {
     const coachCode = document.getElementById('suCoachCode').value.trim().toUpperCase();
     if(coachCode!==HRC_COACH_INVITE){errEl.textContent='Coach access code not recognised — check with your head coach.';errEl.style.display='block';return;}
+  }
+  if(role==='parent') {
+    const parentCode = document.getElementById('suParentCode').value.trim().toUpperCase();
+    if(parentCode!==HRC_PARENT_INVITE){errEl.textContent='Parent access code not recognised — check with your coach.';errEl.style.display='block';return;}
   }
   try {
     const res = await fetch(SUPA_URL+'/auth/v1/signup?redirect_to='+encodeURIComponent(HRC_SITE_URL), {
@@ -1434,6 +1444,9 @@ async function initApp() {
   const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
   document.querySelectorAll('.coach-only').forEach(el=>{
     el.style.display = isCoach ? '' : 'none';
+  });
+  document.querySelectorAll('.hide-from-parent').forEach(el=>{
+    el.style.display = CU.role==='parent' ? 'none' : '';
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
@@ -1575,6 +1588,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 // NAVIGATION
 // ════════════════════════════════════════════
 function go(screen) {
+  if(CU && CU.role==='parent' && ['roster','lineup','athlete'].includes(screen)) {
+    toast("This section isn't available for parent accounts");
+    screen = 'home';
+  }
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nt').forEach(t=>t.classList.toggle('active',t.dataset.s===screen));
   const el = document.getElementById('scr-'+screen);
@@ -1712,7 +1729,7 @@ function buildRoster() {
       <div class="athlete-avatar" style="background:${color}">${initials}</div>
       <div class="athlete-info">
         <div class="athlete-name">${a.name} ${groupBadge}</div>
-        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.side||'Rower'}</div>
+        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':a.side||'Rower'}</div>
       </div>
     </div>`;
   }).join('');
