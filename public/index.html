@@ -1166,6 +1166,13 @@ body {
   </div>
 </div>
 
+<!-- GENERIC PICKER MODAL (seat / cox / boat selection) -->
+<div class="modal-overlay" id="pickerModal">
+  <div class="modal">
+    <div id="pickerModalContent"></div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════
 // SUPABASE CONFIG
@@ -1819,45 +1826,68 @@ function absentOn(athleteId, isoDate) {
   });
 }
 
+// Names already committed to a boat in this race — across every boat class
+// (in-memory drafts) plus any lineups already saved for this race — so a
+// coach can't double-book a rower into two boats for the same practice.
+function assignedElsewhereInRace(race, excludeKey, excludeIdx) {
+  const names = new Set();
+  BOAT_CLASSES.forEach(c=>{
+    const k = race+'|'+c.id;
+    const seats = lineupData[k];
+    if(Array.isArray(seats)) {
+      seats.forEach((s,i)=>{
+        if(!s) return;
+        if(k===excludeKey && i===excludeIdx) return; // the seat being edited itself
+        names.add(s.toLowerCase());
+      });
+    }
+    const cox = lineupData[k+'|cox'];
+    if(cox && k===excludeKey && excludeIdx===-1) { /* editing cox itself, skip */ }
+    else if(cox) names.add(cox.toLowerCase());
+  });
+  LINEUPS.filter(l=>l.race===race).forEach(l=>{
+    try { (JSON.parse(l.seats||'[]')||[]).forEach(s=>{ if(s) names.add(s.toLowerCase()); }); } catch(e){}
+    if(l.cox) names.add(l.cox.toLowerCase());
+  });
+  return names;
+}
+
 function assignSeat(key, idx) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
+  const race = lineupRaceLabel();
   const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
-  const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal));
-  const excludedCount = all.length - athletes.length;
-  const note = excludedCount ? `\n\n(${excludedCount} athlete${excludedCount>1?'s':''} hidden — reported absent this date)` : '';
-  const name = prompt('Assign seat '+(parseInt(BOAT_CLASSES.find(c=>c.id===lineupBoatClass)?.seats||8)-idx)+':\n'+athletes.map((a,i)=>`${i+1}. ${a.name}`).join('\n')+note+'\n\nEnter number or name:');
-  if(!name) return;
-  const num = parseInt(name);
-  const athlete = isNaN(num) ? athletes.find(a=>a.name.toLowerCase().includes(name.toLowerCase())) : athletes[num-1];
-  if(athlete) { lineupData[key][idx]=athlete.name; buildLineupBoard(); }
+  const taken = assignedElsewhereInRace(race, key, idx);
+  const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal) && !taken.has(a.name.toLowerCase()));
+  const absentCount = all.filter(a=>absentOn(a.id, lineupDateVal)).length;
+  const takenCount = all.length - absentCount - athletes.length;
+  const seatNum = parseInt(BOAT_CLASSES.find(c=>c.id===lineupBoatClass)?.seats||8)-idx;
+  const notes = [];
+  if(absentCount) notes.push(`${absentCount} hidden — reported absent`);
+  if(takenCount) notes.push(`${takenCount} hidden — already in another boat this practice`);
+  const items = athletes.map(a=>({label:a.name, sub:a.group||'', value:a.name}));
+  openPicker('Assign Seat '+seatNum, items, (val)=>{ lineupData[key][idx]=val; buildLineupBoard(); }, {note:notes.join(' · ')});
 }
 
 function assignCox(key) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
+  const race = lineupRaceLabel();
   const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
-  const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal));
-  const excludedCount = all.length - athletes.length;
-  const note = excludedCount ? `\n\n(${excludedCount} athlete${excludedCount>1?'s':''} hidden — reported absent this date)` : '';
-  const input = prompt('Assign coxswain:\n'+athletes.map((a,i)=>`${i+1}. ${a.name}`).join('\n')+note+'\n\nEnter number or name (blank to clear):');
-  if(input===null) return;
-  if(!input.trim()) { lineupData[key+'|cox']=null; buildLineupBoard(); return; }
-  const num = parseInt(input);
-  const athlete = isNaN(num) ? athletes.find(a=>a.name.toLowerCase().includes(input.toLowerCase())) : athletes[num-1];
-  if(athlete) { lineupData[key+'|cox']=athlete.name; buildLineupBoard(); }
-  else toast('Athlete not found');
+  const taken = assignedElsewhereInRace(race, key, -1);
+  const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal) && !taken.has(a.name.toLowerCase()));
+  const absentCount = all.filter(a=>absentOn(a.id, lineupDateVal)).length;
+  const takenCount = all.length - absentCount - athletes.length;
+  const notes = [];
+  if(absentCount) notes.push(`${absentCount} hidden — reported absent`);
+  if(takenCount) notes.push(`${takenCount} hidden — already in another boat this practice`);
+  const items = athletes.map(a=>({label:a.name, sub:a.group||'', value:a.name}));
+  openPicker('Assign Coxswain', items, (val)=>{ lineupData[key+'|cox']=val; buildLineupBoard(); }, {note:notes.join(' · ')});
 }
 
 function assignBoat(key) {
   const available = BOATS.filter(b=>b.boat_class===lineupBoatClass && b.status!=='retired');
   if(!available.length) { toast('No boats of this class in inventory'); return; }
-  const listing = available.map((b,i)=>`${i+1}. ${b.name}${b.status==='repair'?' (in repair)':''}`).join('\n');
-  const input = prompt('Assign boat:\n'+listing+'\n\nEnter number or name (blank to clear):');
-  if(input===null) return;
-  if(!input.trim()) { lineupData[key+'|boat']=null; buildLineupBoard(); return; }
-  const num = parseInt(input);
-  const boat = !isNaN(num) ? available[num-1] : available.find(b=>b.name.toLowerCase().includes(input.toLowerCase()));
-  if(boat) { lineupData[key+'|boat']=boat.name; buildLineupBoard(); }
-  else toast('Boat not found');
+  const items = available.map(b=>({label:b.name, sub:b.status==='repair'?'In repair':'', value:b.name}));
+  openPicker('Assign Boat', items, (val)=>{ lineupData[key+'|boat']=val; buildLineupBoard(); });
 }
 
 function clearLineup(key) { 
@@ -2694,6 +2724,45 @@ function openShiftAssignModal(dateStr, shiftId) {
     </div>`;
   document.getElementById('shiftModal').classList.add('open');
 }
+
+// ── GENERIC PICKER MODAL (used for seat/cox/boat selection) ──
+let pickerCallback = null;
+let pickerItems = [];
+
+function openPicker(title, items, onSelect, opts) {
+  opts = opts || {};
+  pickerCallback = onSelect;
+  pickerItems = items;
+  const clearable = opts.clearable !== false;
+  document.getElementById('pickerModalContent').innerHTML = `
+    <div class="modal-hd">
+      <div class="modal-title">${title}</div>
+      <button class="modal-close" onclick="closePicker()">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+      ${opts.note?`<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;padding:0 0 10px">${opts.note}</div>`:''}
+      ${clearable?`<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="pickerSelect(null)"><div class="card-title" style="color:var(--text3)">Clear / Unassigned</div></div>`:''}
+      ${items.map((it,i)=>`<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="pickerSelect(${i})">
+        <div class="card-title">${it.label}</div>
+        ${it.sub?`<div class="card-sub">${it.sub}</div>`:''}
+      </div>`).join('')}
+      ${!items.length?'<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:12px 0">No options available.</div>':''}
+    </div>`;
+  document.getElementById('pickerModal').classList.add('open');
+}
+
+function pickerSelect(i) {
+  const val = i===null ? null : pickerItems[i].value;
+  closePicker();
+  if(pickerCallback) pickerCallback(val);
+}
+
+function closePicker() {
+  document.getElementById('pickerModal').classList.remove('open');
+}
+document.getElementById('pickerModal').addEventListener('click', function(e){
+  if(e.target===this) closePicker();
+});
 
 function closeShiftModal() {
   document.getElementById('shiftModal').classList.remove('open');
