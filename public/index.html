@@ -1779,30 +1779,31 @@ function buildLineupBoard() {
   const sides = bc.seats===8 ? ['S','P','S','P','S','P','S','P'] : bc.seats===4 ? ['S','P','S','P'] : ['S','P'];
 
   const boatName = lineupData[key+'|boat']||null;
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
   let html = `<div class="boat-diagram">
     <div class="boat-hd">
       <span class="boat-label">${bc.label} — ${race.split('—')[0].trim()}</span>
-      <button class="race-lineup-btn" onclick="clearLineup('${key}')">Clear</button>
+      ${isCoach?`<button class="race-lineup-btn" onclick="clearLineup('${key}')">Clear</button>`:''}
     </div>
     <div class="seat-row" style="border-bottom:1px solid var(--border2)">
       <div class="seat-num" style="color:var(--text3)">Hull</div>
-      <div class="seat-slot${boatName?' filled':''}" onclick="assignBoat('${key}')">
-        ${boatName||'<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">Tap to assign boat</span>'}
+      <div class="seat-slot${boatName?' filled':''}" ${isCoach?`onclick="assignBoat('${key}')"`:''}>
+        ${boatName||`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign boat':'Unassigned'}</span>`}
       </div>
       <div class="seat-side"></div>
     </div>
     ${seats.map((seat,i)=>`
       <div class="seat-row">
         <div class="seat-num">${bc.seats-i}</div>
-        <div class="seat-slot${seat?' filled':''}" onclick="assignSeat('${key}',${i})">
-          ${seat||'<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">Tap to assign</span>'}
+        <div class="seat-slot${seat?' filled':''}" ${isCoach?`onclick="assignSeat('${key}',${i})"`:''}>
+          ${seat||`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
         </div>
         <div class="seat-side">${sides[i]}</div>
       </div>`).join('')}
     <div class="seat-row" style="border-top:1px solid var(--border2)">
       <div class="seat-num" style="color:var(--text3)">Cox</div>
-      <div class="seat-slot${lineupData[key+'|cox']?' filled':''}" onclick="assignCox('${key}')">
-        ${lineupData[key+'|cox']||'<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">Tap to assign</span>'}
+      <div class="seat-slot${lineupData[key+'|cox']?' filled':''}" ${isCoach?`onclick="assignCox('${key}')"`:''}>
+        ${lineupData[key+'|cox']||`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
       </div>
       <div class="seat-side"></div>
     </div>
