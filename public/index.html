@@ -1649,6 +1649,7 @@ function buildRoster() {
   else if(rosterFilter==='U17') athletes = athletes.filter(a=>a.group==='U17');
   else if(rosterFilter==='coach') athletes = athletes.filter(a=>['head-coach','asst-coach'].includes(a.role));
   else athletes = athletes.filter(a=>a.role!=='admin');
+  athletes = athletes.slice().sort(byLastName);
 
   document.getElementById('rosterCount').textContent = `${athletes.length} members`;
 
@@ -1820,7 +1821,7 @@ function absentOn(athleteId, isoDate) {
 
 function assignSeat(key, idx) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
-  const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
   const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal));
   const excludedCount = all.length - athletes.length;
   const note = excludedCount ? `\n\n(${excludedCount} athlete${excludedCount>1?'s':''} hidden — reported absent this date)` : '';
@@ -1832,8 +1833,18 @@ function assignSeat(key, idx) {
 }
 
 function assignCox(key) {
-  const name = prompt('Assign coxswain (name):');
-  if(name) { lineupData[key+'|cox']=name; buildLineupBoard(); }
+  const lineupDateVal = document.getElementById('lineupDate')?.value;
+  const all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal));
+  const excludedCount = all.length - athletes.length;
+  const note = excludedCount ? `\n\n(${excludedCount} athlete${excludedCount>1?'s':''} hidden — reported absent this date)` : '';
+  const input = prompt('Assign coxswain:\n'+athletes.map((a,i)=>`${i+1}. ${a.name}`).join('\n')+note+'\n\nEnter number or name (blank to clear):');
+  if(input===null) return;
+  if(!input.trim()) { lineupData[key+'|cox']=null; buildLineupBoard(); return; }
+  const num = parseInt(input);
+  const athlete = isNaN(num) ? athletes.find(a=>a.name.toLowerCase().includes(input.toLowerCase())) : athletes[num-1];
+  if(athlete) { lineupData[key+'|cox']=athlete.name; buildLineupBoard(); }
+  else toast('Athlete not found');
 }
 
 function assignBoat(key) {
@@ -2304,6 +2315,14 @@ async function deleteBoat(id) {
 }
 
 // ── MESSAGING ──
+function lastNameOf(name) {
+  const parts = (name||'').trim().split(/\s+/);
+  return parts.length ? parts[parts.length-1].toLowerCase() : '';
+}
+function byLastName(a, b) {
+  return lastNameOf(a.name).localeCompare(lastNameOf(b.name));
+}
+
 function is2kTest(test) {
   return ['2k','3x2k','4x2k'].includes(test);
 }
