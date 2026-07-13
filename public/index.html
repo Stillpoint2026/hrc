@@ -1205,8 +1205,10 @@ const SUPA_URL = 'https://dbaayypiilwnrbpusiko.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRiYWF5eXBpaWx3bnJicHVzaWtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTg5NzAsImV4cCI6MjA4OTMzNDk3MH0.0D15NkY1PK47Udz7gmPRjXUUDzIryn0MRV4f3tDS6Ls';
 const HRC_CLUB = 'Hawk Rowing Club';
 const HRC_INVITE = 'HRC2026';
-const HRC_COACH_INVITE = 'HRCCOACH26';
-const HRC_PARENT_INVITE = 'HRCPARENT26';
+const HRC_COACH_INVITE = 'HRCCOACH2026';
+const HRC_COACH_INVITE_ALT = 'HRCCOACH26';
+const HRC_PARENT_INVITE = 'HRCPARENT2026';
+const HRC_PARENT_INVITE_ALT = 'HRCPARENT26';
 const HRC_SITE_URL = 'https://hawkrowingclub.org';
 
 function supaHeaders(token) {
@@ -1377,11 +1379,11 @@ async function doSignUp() {
   if(code!==HRC_INVITE){errEl.textContent='Invite code not recognised — check with your coach.';errEl.style.display='block';return;}
   if(role==='asst-coach') {
     const coachCode = document.getElementById('suCoachCode').value.trim().toUpperCase();
-    if(coachCode!==HRC_COACH_INVITE){errEl.textContent='Coach access code not recognised — check with your head coach.';errEl.style.display='block';return;}
+    if(coachCode!==HRC_COACH_INVITE && coachCode!==HRC_COACH_INVITE_ALT){errEl.textContent='Coach access code not recognised — check with your head coach.';errEl.style.display='block';return;}
   }
   if(role==='parent') {
     const parentCode = document.getElementById('suParentCode').value.trim().toUpperCase();
-    if(parentCode!==HRC_PARENT_INVITE){errEl.textContent='Parent access code not recognised — check with your coach.';errEl.style.display='block';return;}
+    if(parentCode!==HRC_PARENT_INVITE && parentCode!==HRC_PARENT_INVITE_ALT){errEl.textContent='Parent access code not recognised — check with your coach.';errEl.style.display='block';return;}
   }
   try {
     const res = await fetch(SUPA_URL+'/auth/v1/signup?redirect_to='+encodeURIComponent(HRC_SITE_URL), {
