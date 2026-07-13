@@ -1315,7 +1315,7 @@ let lineupData = {};
 const BOAT_CLASSES = [
   {id:'eight', label:'8+', seats:8},
   {id:'four', label:'4+', seats:4},
-  {id:'pair', label:'2+', seats:2},
+  {id:'pair', label:'2-', seats:2},
 ];
 
 const AVATAR_COLORS = ['#9E1B32','#7a5840','#4a6878','#5a7a5a','#7a4a6a','#4a7a8a','#8a6a4a','#6a4a8a'];
@@ -1744,6 +1744,7 @@ function sideMeta(side) {
   if(side==='port') return {label:'Port', color:'#e05c5c'};
   if(side==='starboard') return {label:'Starboard', color:'#5a9a6a'};
   if(side==='both') return {label:'Both', color:'#c0964a'};
+  if(side==='cox') return {label:'Coxswain', color:'#4a7ac0'};
   return null;
 }
 
@@ -1751,7 +1752,7 @@ async function cycleAthleteSide(athleteId, event) {
   if(event) event.stopPropagation();
   const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
   if(!isCoach) return;
-  const order = ['port','starboard','both',null];
+  const order = ['port','starboard','both','cox',null];
   const a = ATHLETES.find(x=>x.id===athleteId);
   if(!a) return;
   const idx = order.indexOf(a.side||null);
@@ -1929,13 +1930,13 @@ function buildLineupBoard() {
         </div>
         <div class="seat-side">${sides[i]}</div>
       </div>`).join('')}
-    <div class="seat-row" style="border-top:1px solid var(--border2)">
+    ${lineupBoatClass!=='pair'?`<div class="seat-row" style="border-top:1px solid var(--border2)">
       <div class="seat-num" style="color:var(--text3)">Cox</div>
       <div class="seat-slot${lineupData[key+'|cox']?' filled':''}" ${isCoach?`onclick="assignCox('${key}')"`:''}>
         ${lineupData[key+'|cox']||`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
       </div>
       <div class="seat-side"></div>
-    </div>
+    </div>`:''}
   </div>`;
   document.getElementById('lineupBoard').innerHTML = html;
 }
