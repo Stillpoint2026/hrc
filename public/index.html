@@ -1699,18 +1699,16 @@ function setSchedFilter(f) { schedFilter=f; buildSchedule(); }
 // ════════════════════════════════════════════
 // ROSTER
 // ════════════════════════════════════════════
-const ROSTER_FILTERS = [{id:'all',l:'All'},{id:'U19',l:'U19'},{id:'U17',l:'U17'},{id:'coach',l:'Coaches'}];
+const ROSTER_FILTERS = [{id:'all',l:'All'},{id:'U19',l:'U19'},{id:'U17',l:'U17'}];
 
 function buildRoster() {
   document.getElementById('rosterFilters').innerHTML = ROSTER_FILTERS.map(f=>
     `<div class="fpill${f.id===rosterFilter?' active':''}" onclick="setRosterFilter('${f.id}')">${f.l}</div>`
   ).join('');
 
-  let athletes = ATHLETES;
+  let athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
   if(rosterFilter==='U19') athletes = athletes.filter(a=>a.group==='U19');
   else if(rosterFilter==='U17') athletes = athletes.filter(a=>a.group==='U17');
-  else if(rosterFilter==='coach') athletes = athletes.filter(a=>['head-coach','asst-coach'].includes(a.role));
-  else athletes = athletes.filter(a=>a.role!=='admin');
   athletes = athletes.slice().sort(byLastName);
 
   document.getElementById('rosterCount').textContent = `${athletes.length} members`;
