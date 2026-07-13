@@ -1083,6 +1083,7 @@ body {
       <div class="tab" onclick="switchCoachTab('shifts')">Shifts</div>
       <div class="tab" onclick="switchCoachTab('boats')">Boats</div>
       <div class="tab" onclick="switchCoachTab('parents')">Parents</div>
+      <div class="tab" onclick="switchCoachTab('rigging')">Rigging</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
@@ -2171,6 +2172,10 @@ function switchCoachTab(tab) {
     renderParentsList();
     return;
 
+  } else if(tab==='rigging') {
+    renderRigging();
+    return;
+
   } else if(tab==='profile') {
     const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
     el.innerHTML = `<div class="absence-form">
@@ -2418,6 +2423,57 @@ function switchAthleteTab(tab) {
 }
 
 // ── BOAT INVENTORY ──
+// ── RIGGING GUIDE ──
+const RIGGING_DATA = {
+  eight: { label:'8+', spread:'79–80 cm', oarLength:'376–379 cm', inboard:'114–116 cm', pitch:'4° stern', oarlockHeight:'15–16 cm above seat' },
+  four:  { label:'4+', spread:'79–80 cm', oarLength:'376–379 cm', inboard:'114–116 cm', pitch:'4° stern', oarlockHeight:'15–16 cm above seat' },
+  pair:  { label:'2+', spread:'80–81 cm', oarLength:'373–376 cm', inboard:'113–115 cm', pitch:'4° stern', oarlockHeight:'16–17 cm above seat' },
+};
+let riggingClass = 'eight';
+
+function setRiggingClass(cls) { riggingClass = cls; renderRigging(); }
+
+function renderRigging() {
+  const el = document.getElementById('coachTabContent');
+  const r = RIGGING_DATA[riggingClass];
+  el.innerHTML = `
+    <div style="padding:14px 16px 4px">
+      <div class="section-label" style="padding:0">Rigging Calculator</div>
+      <div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;margin-top:4px;line-height:1.5">General junior/high-school sweep starting points — fine-tune per boat and athlete.</div>
+    </div>
+    <div class="filter-strip" style="padding:0 16px 12px;border:none">
+      ${BOAT_CLASSES.map(c=>`<div class="fpill${c.id===riggingClass?' active':''}" onclick="setRiggingClass('${c.id}')">${c.label}</div>`).join('')}
+    </div>
+    <div class="card" style="margin:0 16px 16px">
+      <div class="card-title" style="margin-bottom:10px">${r.label} Recommended Settings</div>
+      <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2.2">
+        <div class="flex-between"><span style="color:var(--text3)">Spread</span><span>${r.spread}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Oar Length</span><span>${r.oarLength}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Inboard</span><span>${r.inboard}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Pitch</span><span>${r.pitch}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Oarlock Height</span><span>${r.oarlockHeight}</span></div>
+      </div>
+    </div>
+    <div style="padding:0 16px 4px">
+      <div class="section-label" style="padding:0">Reference Chart — All Classes</div>
+    </div>
+    <div class="card" style="margin:0 16px 16px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-family:-apple-system,sans-serif;font-size:12px;color:var(--text2)">
+        <tr style="border-bottom:1px solid var(--border2)">
+          <th style="text-align:left;padding:6px 8px 6px 0;color:var(--text3);font-weight:400">Setting</th>
+          ${BOAT_CLASSES.map(c=>`<th style="text-align:left;padding:6px 8px;color:var(--text3);font-weight:400">${c.label}</th>`).join('')}
+        </tr>
+        ${['spread','oarLength','inboard','pitch','oarlockHeight'].map(key=>{
+          const rowLabel = {spread:'Spread',oarLength:'Oar Length',inboard:'Inboard',pitch:'Pitch',oarlockHeight:'Oarlock Height'}[key];
+          return `<tr style="border-bottom:1px solid var(--border2)">
+            <td style="padding:6px 8px 6px 0">${rowLabel}</td>
+            ${BOAT_CLASSES.map(c=>`<td style="padding:6px 8px">${RIGGING_DATA[c.id][key]}</td>`).join('')}
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>`;
+}
+
 function renderParentsList() {
   const el = document.getElementById('coachTabContent');
   const parents = ATHLETES.filter(a=>a.role==='parent').sort(byLastName);
