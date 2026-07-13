@@ -1082,6 +1082,7 @@ body {
       <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
       <div class="tab" onclick="switchCoachTab('shifts')">Shifts</div>
       <div class="tab" onclick="switchCoachTab('boats')">Boats</div>
+      <div class="tab" onclick="switchCoachTab('oars')">Oars</div>
       <div class="tab" onclick="switchCoachTab('parents')">Parents</div>
       <div class="tab" onclick="switchCoachTab('rigging')">Rigging</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
@@ -1292,6 +1293,8 @@ let ANNOUNCEMENTS = [];
 let SHIFTS = [];
 let BOATS = [];
 let boatEditId = null;
+let OARS = [];
+let oarEditId = null;
 let THREADS = [];
 let MESSAGES = [];
 let currentThreadId = null;
@@ -1477,7 +1480,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1538,6 +1541,11 @@ async function loadShifts() {
 async function loadBoats() {
   const rows = await supaGet('hrc_boats', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '200'});
   BOATS = rows || [];
+}
+
+async function loadOars() {
+  const rows = await supaGet('hrc_oars', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '300'});
+  OARS = rows || [];
 }
 
 async function loadThreads() {
@@ -2168,6 +2176,10 @@ function switchCoachTab(tab) {
     renderBoats();
     return;
 
+  } else if(tab==='oars') {
+    renderOars();
+    return;
+
   } else if(tab==='parents') {
     renderParentsList();
     return;
@@ -2598,6 +2610,122 @@ async function deleteBoat(id) {
   const ok = await supaDelete('hrc_boats', {id});
   if(ok) { BOATS = BOATS.filter(b=>b.id!==id); toast('Boat removed'); }
   switchCoachTab('boats');
+}
+
+// ── OAR INVENTORY ──
+function renderOars() {
+  const el = document.getElementById('coachTabContent');
+  const isHead = ['head-coach','asst-coach','admin'].includes(CU.role);
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Oar Inventory</div>
+    ${isHead?`<button class="race-lineup-btn" onclick="openOarForm()">+ Add Oar</button>`:''}
+  </div>`;
+  if(!OARS.length) {
+    html += '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No oars added yet.</div>';
+  } else {
+    html += OARS.map(o => {
+      const sm = sideMeta(o.side);
+      const st = BOAT_STATUSES.find(s=>s.id===o.status) || BOAT_STATUSES[0];
+      return `<div class="card" style="cursor:pointer" onclick="openOarForm('${o.id}')">
+        <div class="flex-between">
+          <div>
+            <div class="card-title" style="display:flex;align-items:center;gap:6px">
+              ${sm?`<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:${sm.color};font-size:8px;color:#fff;font-weight:600">${sm.label[0]}</span>`:''}
+              ${o.name}
+            </div>
+            <div class="card-sub">${o.length||'—'}${o.assigned_boat_name?' · '+o.assigned_boat_name:''}</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
+        </div>
+        ${o.manufacturer||o.notes?`<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-top:6px">${o.manufacturer||''}${o.manufacturer&&o.notes?' · ':''}${o.notes||''}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+function openOarForm(id) {
+  oarEditId = id || null;
+  const o = id ? OARS.find(x=>x.id===id) : null;
+  const el = document.getElementById('coachTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group">
+      <label class="pr-label">Oar Name / Label</label>
+      <input class="form-input" id="oarName" placeholder="e.g. Port Oar #3" value="${o?.name||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Side</label>
+      <select class="form-select" id="oarSide">
+        <option value="port" ${o?.side==='port'?'selected':''}>Port</option>
+        <option value="starboard" ${o?.side==='starboard'?'selected':''}>Starboard</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Length</label>
+      <input class="form-input" id="oarLength" placeholder="e.g. 377 cm" value="${o?.length||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Manufacturer / Model</label>
+      <input class="form-input" id="oarMfr" placeholder="e.g. Concept2, Dreissigacker" value="${o?.manufacturer||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Status</label>
+      <select class="form-select" id="oarStatus">
+        ${BOAT_STATUSES.map(s=>`<option value="${s.id}" ${(o?.status||'in-service')===s.id?'selected':''}>${s.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Assigned Boat</label>
+      <select class="form-select" id="oarBoat">
+        <option value="" ${!o?.assigned_boat_id?'selected':''}>Unassigned</option>
+        ${BOATS.map(b=>`<option value="${b.id}" ${o?.assigned_boat_id===b.id?'selected':''}>${b.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Notes</label>
+      <textarea class="form-textarea" id="oarNotes" placeholder="Optional">${o?.notes||''}</textarea>
+    </div>
+    <button class="submit-btn" onclick="saveOar()">${o?'Save Changes':'Add Oar'}</button>
+    ${o?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteOar('${o.id}')">Delete Oar</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchCoachTab('oars')">Cancel</button>
+    <div id="oarMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveOar() {
+  const name = document.getElementById('oarName').value.trim();
+  const side = document.getElementById('oarSide').value;
+  const length = document.getElementById('oarLength').value.trim();
+  const manufacturer = document.getElementById('oarMfr').value.trim();
+  const status = document.getElementById('oarStatus').value;
+  const boatId = document.getElementById('oarBoat').value;
+  const boat = BOATS.find(b=>b.id===boatId);
+  const notes = document.getElementById('oarNotes').value.trim();
+  const msgEl = document.getElementById('oarMsg');
+  if(!name) { msgEl.textContent='Oar name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+
+  const fields = {name, side, length, manufacturer, status, assigned_boat_id: boatId||null, assigned_boat_name: boat?boat.name:null, notes};
+
+  if(oarEditId) {
+    const ok = await supaPatch('hrc_oars', {id: oarEditId}, fields);
+    if(ok) {
+      const o = OARS.find(x=>x.id===oarEditId);
+      if(o) Object.assign(o, fields);
+      toast('Oar updated'); switchCoachTab('oars');
+    } else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_oars', rec);
+    if(res) { OARS.push(rec); OARS.sort((a,b2)=>(a.name||'').localeCompare(b2.name||'')); toast('Oar added'); switchCoachTab('oars'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteOar(id) {
+  if(!confirm('Remove this oar from inventory?')) return;
+  const ok = await supaDelete('hrc_oars', {id});
+  if(ok) { OARS = OARS.filter(o=>o.id!==id); toast('Oar removed'); }
+  switchCoachTab('oars');
 }
 
 // ── MESSAGING ──
