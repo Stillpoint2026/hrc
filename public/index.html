@@ -826,6 +826,7 @@ body {
     <div class="nt hide-from-parent" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
+    <div class="nt" data-s="documents" onclick="go('documents')">Documents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
   </div>
   <div class="nav-right">
@@ -1134,6 +1135,18 @@ body {
     <div id="parentTabContent"></div>
   </div>
 
+  <!-- DOCUMENTS -->
+  <div class="scr" id="scr-documents">
+    <div class="scr-hd flex-between">
+      <div>
+        <div class="scr-title">Documents</div>
+        <div class="scr-sub">Waivers, race info, and team paperwork</div>
+      </div>
+      <button class="race-lineup-btn coach-only" onclick="openAddDocument()">+ Add Document</button>
+    </div>
+    <div id="documentsContent"></div>
+  </div>
+
   <!-- ABSENCE -->
   <div class="scr" id="scr-absence">
     <div class="scr-hd">
@@ -1272,6 +1285,7 @@ let ABSENCES = [];
 let ERG_SCORES = [];
 let WORKOUTS = [];
 let RESOURCES = [];
+let DOCUMENTS = [];
 let ANNOUNCEMENTS = [];
 let SHIFTS = [];
 let BOATS = [];
@@ -1458,7 +1472,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1468,6 +1482,7 @@ async function initApp() {
   buildAthleteHub();
   buildParentPortal();
   buildMessages();
+  buildDocuments();
   populateAbsenceDropdown();
   fetchWeather();
   go('home');
@@ -1503,6 +1518,11 @@ async function loadWorkouts() {
 async function loadResources() {
   const rows = await supaGet('hrc_resources', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '100'});
   RESOURCES = rows || [];
+}
+
+async function loadDocuments() {
+  const rows = await supaGet('hrc_documents', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '200'});
+  DOCUMENTS = rows || [];
 }
 
 async function loadShifts() {
@@ -3039,6 +3059,39 @@ async function openAddResource() {
   RESOURCES.unshift(record);
   switchAthleteTab('resources');
   toast('Resource added');
+}
+
+function buildDocuments() {
+  const el = document.getElementById('documentsContent');
+  if(!el) return;
+  if(!DOCUMENTS.length) {
+    el.innerHTML = '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No documents posted yet.</div>';
+    return;
+  }
+  el.innerHTML = DOCUMENTS.map(d=>{
+    const dt = d.created_at ? new Date(d.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    return `<div class="card" style="cursor:pointer" onclick="window.open('${(d.url||'').replace(/'/g,"\\'")}','_blank')">
+      <div class="flex-between">
+        <div>
+          <div class="card-title">${d.title}</div>
+          <div class="card-sub">${d.category?d.category+' · ':''}Added ${dt}</div>
+        </div>
+        <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase">Open</div>
+      </div>
+      ${d.description?`<div style="margin-top:8px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);line-height:1.5">${d.description}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function openAddDocument() {
+  const title = prompt('Document title (e.g. Medical Waiver, HOCR Info Packet):'); if(!title) return;
+  const url = prompt('Link to the document (Google Drive, Dropbox, or any URL):'); if(!url) return;
+  const category = prompt('Category (optional, e.g. Waiver, Race Info, General):') || '';
+  const description = prompt('Description (optional):') || '';
+  const record = {id:crypto.randomUUID(), club:HRC_CLUB, title, url, category, description, posted_by:CU.id, posted_by_name:CU.name, created_at:new Date().toISOString()};
+  const res = await supaInsert('hrc_documents', record);
+  if(res) { DOCUMENTS.unshift(record); buildDocuments(); toast('Document added'); }
+  else toast('Could not add document — try again');
 }
 
 // ════════════════════════════════════════════
