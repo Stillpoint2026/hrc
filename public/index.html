@@ -1731,6 +1731,27 @@ function setSchedFilter(f) { schedFilter=f; buildSchedule(); }
 // ════════════════════════════════════════════
 const ROSTER_FILTERS = [{id:'all',l:'All'},{id:'U19',l:'U19'},{id:'U17',l:'U17'}];
 
+function sideMeta(side) {
+  if(side==='port') return {label:'Port', color:'#e05c5c'};
+  if(side==='starboard') return {label:'Starboard', color:'#5a9a6a'};
+  if(side==='both') return {label:'Both', color:'#c0964a'};
+  return null;
+}
+
+async function cycleAthleteSide(athleteId, event) {
+  if(event) event.stopPropagation();
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+  if(!isCoach) return;
+  const order = ['port','starboard','both',null];
+  const a = ATHLETES.find(x=>x.id===athleteId);
+  if(!a) return;
+  const idx = order.indexOf(a.side||null);
+  const next = order[(idx+1)%order.length];
+  a.side = next;
+  buildRoster();
+  await supaPatch('hrc_members', {id: athleteId}, {side: next});
+}
+
 function buildRoster() {
   document.getElementById('rosterFilters').innerHTML = ROSTER_FILTERS.map(f=>
     `<div class="fpill${f.id===rosterFilter?' active':''}" onclick="setRosterFilter('${f.id}')">${f.l}</div>`
@@ -1755,11 +1776,14 @@ function buildRoster() {
     const bestErg = ergScores.length ? Math.min(...ergScores.filter(e=>is2kTest(e.test)).map(e=>e.time_seconds||9999)).toString() : '—';
     const attendance = SESSIONS.length ? Math.round((ABSENCES.filter(ab=>ab.athlete_id===a.id).length/Math.max(SESSIONS.length,1))*100) : '—';
     const groupBadge = a.group ? `<span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>` : '';
+    const sm = sideMeta(a.side);
+    const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+    const sideDot = `<span onclick="cycleAthleteSide('${a.id}', event)" title="${sm?sm.label:'Tap to set side'}" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${sm?sm.color:'transparent'};border:1.5px solid ${sm?sm.color:'var(--border2)'};margin-left:8px;${isCoach?'cursor:pointer':''};font-family:-apple-system,sans-serif;font-size:9px;font-weight:600;color:#fff;flex-shrink:0">${sm?sm.label[0]:''}</span>`;
     return `<div class="athlete-card" onclick="openAthleteDetail('${a.id}')">
       <div class="athlete-avatar" style="background:${color}">${initials}</div>
       <div class="athlete-info">
-        <div class="athlete-name">${a.name} ${groupBadge}</div>
-        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':a.side||'Rower'}</div>
+        <div class="athlete-name" style="display:flex;align-items:center">${a.name} ${groupBadge}${sideDot}</div>
+        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':(sm?sm.label:'Rower')}</div>
       </div>
     </div>`;
   }).join('');
@@ -1962,7 +1986,7 @@ function assignSeat(key, idx) {
   const notes = [];
   if(absentCount) notes.push(`${absentCount} hidden — reported absent`);
   if(takenCount) notes.push(`${takenCount} hidden — already in another boat this practice`);
-  const items = athletes.map(a=>({label:a.name, sub:a.group||'', value:a.name}));
+  const items = athletes.map(a=>({label:a.name, sub:[a.group,sideMeta(a.side)?.label].filter(Boolean).join(' · '), value:a.name}));
   openPicker('Assign Seat '+seatNum, items, (val)=>{ lineupData[key][idx]=val; buildLineupBoard(); }, {note:notes.join(' · ')});
 }
 
@@ -1978,7 +2002,7 @@ function assignCox(key) {
   const notes = [];
   if(absentCount) notes.push(`${absentCount} hidden — reported absent`);
   if(takenCount) notes.push(`${takenCount} hidden — already in another boat this practice`);
-  const items = athletes.map(a=>({label:a.name, sub:a.group||'', value:a.name}));
+  const items = athletes.map(a=>({label:a.name, sub:[a.group,sideMeta(a.side)?.label].filter(Boolean).join(' · '), value:a.name}));
   openPicker('Assign Coxswain', items, (val)=>{ lineupData[key+'|cox']=val; buildLineupBoard(); }, {note:notes.join(' · ')});
 }
 
@@ -3362,7 +3386,7 @@ function openAthleteDetail(id) {
   document.getElementById('athleteModalContent').innerHTML = `
     <div class="detail-hero" style="background:${color}">
       <div class="detail-name">${a.name}</div>
-      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':'Rower'}</div>
+      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':(sideMeta(a.side)?sideMeta(a.side).label:'Rower')}</div>
     </div>
     <div class="stat-grid">
       <div class="stat-cell"><div class="stat-val">${best2k?fmtTime(best2k.time_seconds):'—'}</div><div class="stat-lbl">Best 2k</div></div>
