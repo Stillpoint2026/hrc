@@ -2560,6 +2560,9 @@ function visibleThreads() {
   if(isCoach) {
     return THREADS.filter(t => t.kind!=='coach-dm' || t.created_by===CU.id || t.athlete_id===CU.member_id);
   }
+  if(CU.role==='parent') {
+    return THREADS.filter(t => t.kind==='group' && t.group_tag==='Parents');
+  }
   const me = ATHLETES.find(a=>a.id===CU.member_id);
   const myGroup = me?.group;
   return THREADS.filter(t => (t.kind==='individual' && t.athlete_id===CU.member_id) || (t.kind==='group' && (t.group_tag==='All' || t.group_tag===myGroup)));
@@ -2708,6 +2711,7 @@ function openNewThreadForm() {
         <option value="All">All Athletes</option>
         <option value="U19">U19</option>
         <option value="U17">U17</option>
+        ${CU.role==='head-coach'?`<option value="Parents">Parents</option>`:''}
       </select>
     </div>
     <div class="form-group">
@@ -2798,7 +2802,8 @@ async function createThread() {
     title = a.name;
   } else {
     group_tag = document.getElementById('newThreadGroup').value;
-    title = group_tag==='All' ? 'All Athletes' : group_tag+' Squad';
+    if(group_tag==='Parents' && CU.role!=='head-coach') { msgEl.textContent='Only the head coach can message parents.'; msgEl.style.display='block'; return; }
+    title = group_tag==='All' ? 'All Athletes' : group_tag==='Parents' ? 'Parents' : group_tag+' Squad';
   }
   const now = new Date().toISOString();
   const thread = {id:crypto.randomUUID(), club:HRC_CLUB, kind, athlete_id, group_tag, title, created_by:CU.id, created_by_name:CU.name, created_at:now, last_message_at:now, last_message_preview:body.slice(0,80)};
