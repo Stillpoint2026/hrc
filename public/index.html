@@ -1129,6 +1129,7 @@ body {
       <div class="tab" onclick="switchParentTab('races')">Races</div>
       <div class="tab" onclick="switchParentTab('nutrition')">Nutrition</div>
       <div class="tab" onclick="switchParentTab('info')">Program Info</div>
+      <div class="tab parent-only" onclick="switchParentTab('profile')">Profile</div>
     </div>
     <div id="parentTabContent"></div>
   </div>
@@ -1451,6 +1452,9 @@ async function initApp() {
   });
   document.querySelectorAll('.hide-from-parent').forEach(el=>{
     el.style.display = CU.role==='parent' ? 'none' : '';
+  });
+  document.querySelectorAll('.parent-only').forEach(el=>{
+    el.style.display = CU.role==='parent' ? '' : 'none';
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
@@ -2376,11 +2380,12 @@ function renderParentsList() {
   el.innerHTML = `<div style="padding:14px 16px 4px"><div class="section-label" style="padding:0">Parent Accounts (${parents.length})</div></div>` +
     parents.map(p=>{
       const linkedChild = ATHLETES.find(a=>['junior','rower'].includes(a.role) && a.parent_email && p.email && a.parent_email.toLowerCase()===p.email.toLowerCase());
+      const childLabel = linkedChild ? linkedChild.name : (p.child_name || null);
       const dt = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
       return `<div class="card">
         <div class="card-title">${p.name}</div>
-        <div class="card-sub">${p.email||'—'}${linkedChild?' · Parent of '+linkedChild.name:''}</div>
-        ${linkedChild&&linkedChild.parent_phone?`<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-top:4px">${linkedChild.parent_phone}</div>`:''}
+        <div class="card-sub">${p.email||'—'}${childLabel?' · Parent of '+childLabel:''}</div>
+        ${p.phone?`<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-top:4px">${p.phone}</div>`:''}
         <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:4px">Signed up ${dt}</div>
       </div>`;
     }).join('');
@@ -3129,7 +3134,45 @@ function switchParentTab(tab) {
           </div>`).join('') || '<div class="card"><div class="card-sub">Coaching staff will appear here.</div></div>'}
       </div>
 `;
+  } else if(tab==='profile') {
+    const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
+    el.innerHTML = `<div class="absence-form">
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">This is shown to coaches so they know who you are and how to reach you.</div>
+      <div class="form-group">
+        <label class="pr-label">Your Name</label>
+        <input class="form-input" id="ppName" value="${me.name||CU.name||''}">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Email</label>
+        <input class="form-input" value="${me.email||CU.email||''}" disabled style="opacity:.6">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Phone</label>
+        <input class="form-input" id="ppPhone" type="tel" placeholder="e.g. 215-555-0100" value="${me.phone||''}">
+      </div>
+      <div class="form-group">
+        <label class="pr-label">Athlete's Name (your child)</label>
+        <input class="form-input" id="ppChildName" placeholder="e.g. Quinn Bransfield" value="${me.child_name||''}">
+      </div>
+      <button class="submit-btn" onclick="saveParentProfile()">Save Profile</button>
+      <div id="ppMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+    </div>`;
   }
+}
+
+async function saveParentProfile() {
+  const name = document.getElementById('ppName').value.trim();
+  const phone = document.getElementById('ppPhone').value.trim();
+  const child_name = document.getElementById('ppChildName').value.trim();
+  const msgEl = document.getElementById('ppMsg');
+  if(!CU.member_id){ msgEl.textContent='No member record found — sign out and back in.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const ok = await supaPatch('hrc_members', {id: CU.member_id}, {name, phone, child_name});
+  const me = ATHLETES.find(a=>a.id===CU.member_id);
+  if(me){ me.name=name; me.phone=phone; me.child_name=child_name; }
+  msgEl.textContent = ok ? 'Profile saved.' : 'Save failed — try again.';
+  msgEl.style.color = ok ? 'var(--green)' : '#e05c5c';
+  msgEl.style.display='block';
+  if(ok) toast('Profile saved');
 }
 
 // ════════════════════════════════════════════
