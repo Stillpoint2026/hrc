@@ -2826,10 +2826,14 @@ function renderShifts() {
   const myName = (ATHLETES.find(a=>a.id===CU.member_id)?.name)||CU.name;
 
   const rangeLbl = days[0].toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const isCurrentWeek = fmt(shiftWeekStart) === fmt(weekStart(new Date()));
 
-  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:16px">
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;gap:8px">
     <button class="race-lineup-btn" onclick="shiftWeek(-1)">← Prev</button>
-    <div style="font-family:-apple-system,sans-serif;font-weight:400;font-size:13px;color:var(--text)">${rangeLbl}</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-family:-apple-system,sans-serif;font-weight:400;font-size:13px;color:var(--text)">${rangeLbl}</div>
+      ${!isCurrentWeek?`<div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--crimson);cursor:pointer;text-decoration:underline" onclick="goToCurrentShiftWeek()">This Week</div>`:''}
+    </div>
     <button class="race-lineup-btn" onclick="shiftWeek(1)">Next →</button>
   </div>`;
 
@@ -2859,6 +2863,11 @@ function renderShifts() {
 
 function shiftWeek(dir) {
   shiftWeekStart.setDate(shiftWeekStart.getDate() + dir*7);
+  renderShifts();
+}
+
+function goToCurrentShiftWeek() {
+  shiftWeekStart = weekStart(new Date());
   renderShifts();
 }
 
