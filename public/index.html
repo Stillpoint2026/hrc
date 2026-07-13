@@ -1142,7 +1142,8 @@ body {
         <div class="scr-title">Documents</div>
         <div class="scr-sub">Waivers, race info, and team paperwork</div>
       </div>
-      <button class="race-lineup-btn coach-only" onclick="openAddDocument()">+ Add Document</button>
+      <button class="race-lineup-btn head-coach-only" onclick="document.getElementById('docFileInput').click()">+ Upload Document</button>
+      <input type="file" id="docFileInput" style="display:none" onchange="handleDocumentUpload(event)">
     </div>
     <div id="documentsContent"></div>
   </div>
@@ -1469,6 +1470,9 @@ async function initApp() {
   });
   document.querySelectorAll('.parent-only').forEach(el=>{
     el.style.display = CU.role==='parent' ? '' : 'none';
+  });
+  document.querySelectorAll('.head-coach-only').forEach(el=>{
+    el.style.display = CU.role==='head-coach' ? '' : 'none';
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
@@ -3083,15 +3087,36 @@ function buildDocuments() {
   }).join('');
 }
 
-async function openAddDocument() {
-  const title = prompt('Document title (e.g. Medical Waiver, HOCR Info Packet):'); if(!title) return;
-  const url = prompt('Link to the document (Google Drive, Dropbox, or any URL):'); if(!url) return;
-  const category = prompt('Category (optional, e.g. Waiver, Race Info, General):') || '';
+async function handleDocumentUpload(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if(!file) return;
+  if(CU.role!=='head-coach') { toast('Only the head coach can upload documents'); return; }
+  const title = prompt('Document title:', file.name.replace(/\.[^/.]+$/, '')); if(!title) return;
+  const category = prompt('Category (optional, e.g. Waiver, Race Info):') || '';
   const description = prompt('Description (optional):') || '';
-  const record = {id:crypto.randomUUID(), club:HRC_CLUB, title, url, category, description, posted_by:CU.id, posted_by_name:CU.name, created_at:new Date().toISOString()};
-  const res = await supaInsert('hrc_documents', record);
-  if(res) { DOCUMENTS.unshift(record); buildDocuments(); toast('Document added'); }
-  else toast('Could not add document — try again');
+  toast('Uploading…');
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const path = `${Date.now()}_${safeName}`;
+  try {
+    const res = await fetch(`${SUPA_URL}/storage/v1/object/hrc-documents/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + getToken(),
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: file
+    });
+    if(!res.ok) { toast('Upload failed — try again'); return; }
+    const url = `${SUPA_URL}/storage/v1/object/public/hrc-documents/${path}`;
+    const record = {id:crypto.randomUUID(), club:HRC_CLUB, title, url, category, description, posted_by:CU.id, posted_by_name:CU.name, created_at:new Date().toISOString()};
+    const saved = await supaInsert('hrc_documents', record);
+    if(saved) { DOCUMENTS.unshift(record); buildDocuments(); toast('Document uploaded'); }
+    else toast("File uploaded but couldn't save the entry — try again");
+  } catch(e) {
+    toast('Upload failed — try again');
+  }
 }
 
 // ════════════════════════════════════════════
