@@ -2920,6 +2920,7 @@ function renderShifts() {
     <button class="race-lineup-btn" onclick="shiftWeek(1)">Next →</button>
   </div>`;
 
+  const isHeadForShifts = ['head-coach','admin'].includes(CU.role);
   days.forEach(d => {
     const dow = d.getDay();
     const slots = SHIFT_PATTERN.filter(s=>s.dows.includes(dow));
@@ -2930,13 +2931,13 @@ function renderShifts() {
       const rec = SHIFTS.find(x=>x.date===dateStr && x.shift===s.id);
       const names = rec?.coach_names || '';
       const mine = names.toLowerCase().includes((myName||'').toLowerCase());
-      html += `<div class="card" style="margin:0 16px 8px;cursor:pointer;${mine?'border-color:var(--crimson);':''}" onclick="handleShiftTap('${dateStr}','${s.id}')">
+      html += `<div class="card" style="margin:0 16px 8px;${isHeadForShifts?'cursor:pointer;':''}${mine?'border-color:var(--crimson);':''}" onclick="handleShiftTap('${dateStr}','${s.id}')">
         <div class="flex-between">
           <div>
             <div class="card-title" style="font-size:14px">${s.label} ${mine?'<span class="badge" style="background:var(--crimson-light);color:var(--crimson)">You</span>':''}</div>
             <div class="card-sub">${s.time}</div>
           </div>
-          <div style="text-align:right;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:${names?'#fff':'var(--text3)'}">${names||'Tap to sign up'}</div>
+          <div style="text-align:right;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:${names?'#fff':'var(--text3)'}">${names||(isHeadForShifts?'Tap to assign':'Unassigned')}</div>
         </div>
       </div>`;
     });
@@ -2957,7 +2958,7 @@ function goToCurrentShiftWeek() {
 function handleShiftTap(dateStr, shiftId) {
   const isHead = CU.role==='head-coach' || CU.role==='admin';
   if(isHead) { openShiftAssignModal(dateStr, shiftId); }
-  else { toggleMyShift(dateStr, shiftId); }
+  else { toast('Only the head coach can edit shifts'); }
 }
 
 async function toggleMyShift(dateStr, shiftId) {
