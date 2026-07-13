@@ -1375,6 +1375,7 @@ async function doSignUp() {
   const errEl = document.getElementById('suErr');
   errEl.style.display='none';
   if(!name||!email||!pass){errEl.textContent='Please fill in all fields.';errEl.style.display='block';return;}
+  if(name.trim().split(/\s+/).length<2){errEl.textContent='Please enter both your first and last name.';errEl.style.display='block';return;}
   if(pass.length<8){errEl.textContent='Password must be 8+ characters.';errEl.style.display='block';return;}
   if(code!==HRC_INVITE){errEl.textContent='Invite code not recognised — check with your coach.';errEl.style.display='block';return;}
   if(role==='asst-coach') {
