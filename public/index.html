@@ -1081,6 +1081,7 @@ body {
       <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
       <div class="tab" onclick="switchCoachTab('shifts')">Shifts</div>
       <div class="tab" onclick="switchCoachTab('boats')">Boats</div>
+      <div class="tab" onclick="switchCoachTab('parents')">Parents</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
@@ -2114,6 +2115,10 @@ function switchCoachTab(tab) {
     renderBoats();
     return;
 
+  } else if(tab==='parents') {
+    renderParentsList();
+    return;
+
   } else if(tab==='profile') {
     const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
     el.innerHTML = `<div class="absence-form">
@@ -2361,6 +2366,26 @@ function switchAthleteTab(tab) {
 }
 
 // ── BOAT INVENTORY ──
+function renderParentsList() {
+  const el = document.getElementById('coachTabContent');
+  const parents = ATHLETES.filter(a=>a.role==='parent').sort(byLastName);
+  if(!parents.length) {
+    el.innerHTML = '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No parent accounts yet.</div>';
+    return;
+  }
+  el.innerHTML = `<div style="padding:14px 16px 4px"><div class="section-label" style="padding:0">Parent Accounts (${parents.length})</div></div>` +
+    parents.map(p=>{
+      const linkedChild = ATHLETES.find(a=>['junior','rower'].includes(a.role) && a.parent_email && p.email && a.parent_email.toLowerCase()===p.email.toLowerCase());
+      const dt = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      return `<div class="card">
+        <div class="card-title">${p.name}</div>
+        <div class="card-sub">${p.email||'—'}${linkedChild?' · Parent of '+linkedChild.name:''}</div>
+        ${linkedChild&&linkedChild.parent_phone?`<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-top:4px">${linkedChild.parent_phone}</div>`:''}
+        <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:4px">Signed up ${dt}</div>
+      </div>`;
+    }).join('');
+}
+
 function renderBoats() {
   const el = document.getElementById('coachTabContent');
   const isHead = ['head-coach','asst-coach','admin'].includes(CU.role);
