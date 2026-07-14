@@ -1051,7 +1051,12 @@ body {
         <option>Independence Day Regatta — Jul 24–26</option>
         <option>Royal Canadian Henley — Aug 4–9</option>
       </select>
-      <input class="form-input" id="lineupDate" type="date" style="margin-top:10px" onchange="buildLineupBoard()">
+      <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+        <button class="race-lineup-btn" onclick="stepLineupDate(-1)">←</button>
+        <input class="form-input" id="lineupDate" type="date" style="flex:1" onchange="editingLineupId=null; buildLineupBoard();">
+        <button class="race-lineup-btn" onclick="stepLineupDate(1)">→</button>
+      </div>
+      <button class="race-lineup-btn" style="margin-top:8px;width:100%" onclick="goToLineupToday()">Today</button>
       <input class="form-input" id="lineupBoatLabel" type="text" placeholder="Boat label (optional, e.g. 1st Boat, Varsity)" style="margin-top:10px">
     </div>
     <div class="section">
@@ -1852,6 +1857,22 @@ function lineupRaceLabel() {
   const date = document.getElementById('lineupDate')?.value || new Date().toISOString().split('T')[0];
   if(!sel) return '';
   return sel.value === 'practice' ? 'Practice — ' + date : sel.value;
+}
+
+function stepLineupDate(dir) {
+  const dateEl = document.getElementById('lineupDate');
+  if(!dateEl.value) dateEl.value = fmtDate(new Date());
+  const d = new Date(dateEl.value+'T12:00:00');
+  d.setDate(d.getDate()+dir);
+  dateEl.value = fmtDate(d);
+  editingLineupId = null;
+  buildLineupBoard();
+}
+
+function goToLineupToday() {
+  document.getElementById('lineupDate').value = fmtDate(new Date());
+  editingLineupId = null;
+  buildLineupBoard();
 }
 
 function onLineupRaceChange() {
