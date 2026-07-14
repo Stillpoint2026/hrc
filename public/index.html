@@ -3233,7 +3233,10 @@ function openShiftAssignModal(dateStr, shiftId) {
   const slot = SHIFT_PATTERN.find(s=>s.id===shiftId);
   const existing = SHIFTS.find(x=>x.date===dateStr && x.shift===shiftId);
   const current = existing?.coach_names ? existing.coach_names.split(',').map(n=>n.trim()).filter(Boolean) : [];
-  const coaches = ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role)).sort((a,b)=>a.name.localeCompare(b.name));
+  const seenNames = new Set();
+  const coaches = ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role))
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .filter(a=>{ const key=a.name.trim().toLowerCase(); if(seenNames.has(key)) return false; seenNames.add(key); return true; });
 
   document.getElementById('shiftModalContent').innerHTML = `
     <div class="modal-hd">
@@ -3300,7 +3303,8 @@ document.getElementById('shiftModal').addEventListener('click', function(e){
 
 async function saveShiftAssignment(dateStr, shiftId) {
   const checked = Array.from(document.querySelectorAll('.shift-coach-cb:checked')).map(cb=>cb.value);
-  const names = checked.join(', ');
+  const uniqueNames = [...new Set(checked.map(n=>n.trim()))];
+  const names = uniqueNames.join(', ');
   const existing = SHIFTS.find(x=>x.date===dateStr && x.shift===shiftId);
   if(existing) {
     await supaPatch('hrc_shifts', {id: existing.id}, {coach_names: names});
