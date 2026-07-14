@@ -826,6 +826,7 @@ body {
     <div class="nt hide-from-parent" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
+    <div class="nt coach-only" data-s="ltr" onclick="go('ltr')">Learn to Row</div>
     <div class="nt" data-s="documents" onclick="go('documents')">Documents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
   </div>
@@ -1137,6 +1138,19 @@ body {
     <div id="parentTabContent"></div>
   </div>
 
+  <!-- LEARN TO ROW -->
+  <div class="scr" id="scr-ltr">
+    <div class="scr-hd">
+      <div class="scr-title">Learn to Row</div>
+      <div class="scr-sub">7th/8th Grade Summer Camps</div>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchLtrTab('roster')">Roster</div>
+      <div class="tab" onclick="switchLtrTab('attendance')">Attendance</div>
+    </div>
+    <div id="ltrTabContent"></div>
+  </div>
+
   <!-- DOCUMENTS -->
   <div class="scr" id="scr-documents">
     <div class="scr-hd flex-between">
@@ -1289,6 +1303,18 @@ let ERG_SCORES = [];
 let WORKOUTS = [];
 let RESOURCES = [];
 let DOCUMENTS = [];
+let LTR_CAMPERS = [];
+let LTR_ATTENDANCE = [];
+let ltrTab = 'roster';
+let ltrCamperEditId = null;
+let ltrRosterFilter = 'all';
+let ltrCampWeek = 2;
+let ltrSelectedDate = null;
+const LTR_CAMPS = {
+  1: {label:'Camp 1', dates:['2026-07-06','2026-07-07','2026-07-08','2026-07-09','2026-07-10']},
+  2: {label:'Camp 2', dates:['2026-07-13','2026-07-14','2026-07-15','2026-07-16','2026-07-17']},
+  3: {label:'Camp 3', dates:['2026-07-20','2026-07-21','2026-07-22','2026-07-23','2026-07-24']},
+};
 let ANNOUNCEMENTS = [];
 let SHIFTS = [];
 let BOATS = [];
@@ -1480,7 +1506,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1491,6 +1517,7 @@ async function initApp() {
   buildParentPortal();
   buildMessages();
   buildDocuments();
+  buildLtr();
   populateAbsenceDropdown();
   fetchWeather();
   go('home');
@@ -1531,6 +1558,16 @@ async function loadResources() {
 async function loadDocuments() {
   const rows = await supaGet('hrc_documents', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '200'});
   DOCUMENTS = rows || [];
+}
+
+async function loadLtrCampers() {
+  const rows = await supaGet('ltr_campers', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '300'});
+  LTR_CAMPERS = rows || [];
+}
+
+async function loadLtrAttendance() {
+  const rows = await supaGet('ltr_attendance', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '2000'});
+  LTR_ATTENDANCE = rows || [];
 }
 
 async function loadShifts() {
@@ -3273,6 +3310,219 @@ async function openAddResource() {
   RESOURCES.unshift(record);
   switchAthleteTab('resources');
   toast('Resource added');
+}
+
+// ── LEARN TO ROW ──
+function fmtDate(d) { return d.toISOString().split('T')[0]; }
+
+function getCurrentCampWeek() {
+  const todayStr = fmtDate(new Date());
+  for(const num of [1,2,3]) {
+    if(LTR_CAMPS[num].dates.includes(todayStr)) return num;
+  }
+  const today = new Date(todayStr+'T00:00:00');
+  let closest = null, minDiff = Infinity;
+  for(const num of [1,2,3]) {
+    const campStart = new Date(LTR_CAMPS[num].dates[0]+'T00:00:00');
+    const diff = campStart - today;
+    if(diff >= 0 && diff < minDiff) { minDiff = diff; closest = num; }
+  }
+  return closest !== null ? closest : 3;
+}
+
+function buildLtr() {
+  ltrCampWeek = getCurrentCampWeek();
+  const todayStr = fmtDate(new Date());
+  ltrSelectedDate = LTR_CAMPS[ltrCampWeek].dates.includes(todayStr) ? todayStr : LTR_CAMPS[ltrCampWeek].dates[0];
+  switchLtrTab('roster');
+}
+
+function switchLtrTab(tab) {
+  ltrTab = tab;
+  document.querySelectorAll('#scr-ltr .tab').forEach(t=>t.classList.toggle('active', t.textContent.toLowerCase()===tab));
+  if(tab==='roster') renderLtrRoster();
+  else renderLtrAttendance();
+}
+
+function setLtrRosterFilter(f) { ltrRosterFilter = f; renderLtrRoster(); }
+
+function renderLtrRoster() {
+  const el = document.getElementById('ltrTabContent');
+  let campers = LTR_CAMPERS.slice().sort(byLastName);
+  if(ltrRosterFilter!=='all') campers = campers.filter(c=>String(c.camp_session)===ltrRosterFilter);
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px">
+    <div class="filter-strip" style="padding:0;border:none">
+      ${['all','1','2','3'].map(f=>`<div class="fpill${f===ltrRosterFilter?' active':''}" onclick="setLtrRosterFilter('${f}')">${f==='all'?'All':'Camp '+f}</div>`).join('')}
+    </div>
+    <button class="race-lineup-btn" onclick="openLtrCamperForm()">+ Add Camper</button>
+  </div>`;
+
+  if(!campers.length) {
+    html += '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No campers yet.</div>';
+  } else {
+    html += campers.map(c=>`<div class="card" style="cursor:pointer" onclick="openLtrCamperForm('${c.id}')">
+      <div class="flex-between">
+        <div>
+          <div class="card-title">${c.name} <span class="badge" style="background:var(--dark3);color:var(--text2)">${c.grade||'—'}</span></div>
+          <div class="card-sub">Camp ${c.camp_session||'—'}${c.parent_name?' · '+c.parent_name:''}</div>
+        </div>
+      </div>
+      ${c.parent_email||c.parent_phone?`<div style="margin-top:8px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);line-height:1.6">${c.parent_email||''}${c.parent_email&&c.parent_phone?' · ':''}${c.parent_phone||''}</div>`:''}
+    </div>`).join('');
+  }
+  el.innerHTML = html;
+}
+
+function openLtrCamperForm(id) {
+  ltrCamperEditId = id || null;
+  const c = id ? LTR_CAMPERS.find(x=>x.id===id) : null;
+  const el = document.getElementById('ltrTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group">
+      <label class="pr-label">Camper Name</label>
+      <input class="form-input" id="ltrName" placeholder="First Last" value="${c?.name||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Grade</label>
+      <select class="form-select" id="ltrGrade">
+        <option value="7th" ${c?.grade==='7th'?'selected':''}>7th Grade</option>
+        <option value="8th" ${c?.grade==='8th'?'selected':''}>8th Grade</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Camp Session</label>
+      <select class="form-select" id="ltrSession">
+        <option value="1" ${String(c?.camp_session)==='1'?'selected':''}>Camp 1 (Jul 6–10)</option>
+        <option value="2" ${String(c?.camp_session)==='2'?'selected':''}>Camp 2 (Jul 13–17)</option>
+        <option value="3" ${String(c?.camp_session)==='3'?'selected':''}>Camp 3 (Jul 20–24)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Parent/Guardian Name</label>
+      <input class="form-input" id="ltrParentName" value="${c?.parent_name||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Parent Email</label>
+      <input class="form-input" id="ltrParentEmail" type="email" value="${c?.parent_email||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Parent Phone</label>
+      <input class="form-input" id="ltrParentPhone" type="tel" value="${c?.parent_phone||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Notes</label>
+      <textarea class="form-textarea" id="ltrNotes" placeholder="Allergies, pickup notes, etc.">${c?.notes||''}</textarea>
+    </div>
+    <button class="submit-btn" onclick="saveLtrCamper()">${c?'Save Changes':'Add Camper'}</button>
+    ${c?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteLtrCamper('${c.id}')">Remove Camper</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchLtrTab('roster')">Cancel</button>
+    <div id="ltrMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveLtrCamper() {
+  const name = document.getElementById('ltrName').value.trim();
+  const grade = document.getElementById('ltrGrade').value;
+  const camp_session = parseInt(document.getElementById('ltrSession').value);
+  const parent_name = document.getElementById('ltrParentName').value.trim();
+  const parent_email = document.getElementById('ltrParentEmail').value.trim();
+  const parent_phone = document.getElementById('ltrParentPhone').value.trim();
+  const notes = document.getElementById('ltrNotes').value.trim();
+  const msgEl = document.getElementById('ltrMsg');
+  if(!name) { msgEl.textContent='Camper name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const fields = {name, grade, camp_session, parent_name, parent_email, parent_phone, notes};
+
+  if(ltrCamperEditId) {
+    const ok = await supaPatch('ltr_campers', {id: ltrCamperEditId}, fields);
+    if(ok) {
+      const c = LTR_CAMPERS.find(x=>x.id===ltrCamperEditId);
+      if(c) Object.assign(c, fields);
+      toast('Camper updated'); switchLtrTab('roster');
+    } else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('ltr_campers', rec);
+    if(res) { LTR_CAMPERS.push(rec); toast('Camper added'); switchLtrTab('roster'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteLtrCamper(id) {
+  if(!confirm('Remove this camper from the roster?')) return;
+  const ok = await supaDelete('ltr_campers', {id});
+  if(ok) { LTR_CAMPERS = LTR_CAMPERS.filter(c=>c.id!==id); toast('Camper removed'); }
+  switchLtrTab('roster');
+}
+
+function setLtrCampWeek(num) {
+  ltrCampWeek = num;
+  ltrSelectedDate = LTR_CAMPS[num].dates[0];
+  renderLtrAttendance();
+}
+
+function setLtrDate(date) {
+  ltrSelectedDate = date;
+  renderLtrAttendance();
+}
+
+function renderLtrAttendance() {
+  const el = document.getElementById('ltrTabContent');
+  const campers = LTR_CAMPERS.filter(c=>String(c.camp_session)===String(ltrCampWeek)).sort(byLastName);
+  const dateObj = new Date(ltrSelectedDate+'T12:00:00');
+
+  let html = `<div style="padding:14px 16px 4px">
+    <div class="filter-strip" style="padding:0;border:none">
+      ${[1,2,3].map(n=>`<div class="fpill${n===ltrCampWeek?' active':''}" onclick="setLtrCampWeek(${n})">${LTR_CAMPS[n].label}</div>`).join('')}
+    </div>
+  </div>
+  <div style="padding:8px 16px 12px">
+    <div class="filter-strip" style="padding:0;border:none">
+      ${LTR_CAMPS[ltrCampWeek].dates.map(d=>{
+        const dObj = new Date(d+'T12:00:00');
+        const lbl = dObj.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        return `<div class="fpill${d===ltrSelectedDate?' active':''}" onclick="setLtrDate('${d}')">${lbl}</div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  if(!campers.length) {
+    html += `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No campers assigned to ${LTR_CAMPS[ltrCampWeek].label}.</div>`;
+  } else {
+    const presentCount = campers.filter(c=>{
+      const rec = LTR_ATTENDANCE.find(a=>a.camper_id===c.id && a.date===ltrSelectedDate);
+      return rec?.present;
+    }).length;
+    html += `<div style="padding:0 16px 10px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${presentCount}/${campers.length} present — ${dateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>`;
+    html += campers.map(c=>{
+      const rec = LTR_ATTENDANCE.find(a=>a.camper_id===c.id && a.date===ltrSelectedDate);
+      const present = !!rec?.present;
+      return `<div class="card" style="cursor:pointer;${present?'border-color:var(--green);':''}" onclick="toggleLtrAttendance('${c.id}')">
+        <div class="flex-between">
+          <div>
+            <div class="card-title">${c.name}</div>
+            <div class="card-sub">${c.grade||''}</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:${present?'var(--green)':'var(--text3)'}">${present?'Present':'Tap if here'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+async function toggleLtrAttendance(camperId) {
+  const existing = LTR_ATTENDANCE.find(a=>a.camper_id===camperId && a.date===ltrSelectedDate);
+  const newPresent = !existing?.present;
+  if(existing) {
+    await supaPatch('ltr_attendance', {id: existing.id}, {present: newPresent});
+    existing.present = newPresent;
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, camper_id: camperId, date: ltrSelectedDate, present: newPresent, created_at: new Date().toISOString()};
+    await supaInsert('ltr_attendance', rec);
+    LTR_ATTENDANCE.push(rec);
+  }
+  renderLtrAttendance();
 }
 
 function buildDocuments() {
