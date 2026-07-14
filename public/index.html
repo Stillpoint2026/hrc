@@ -3361,7 +3361,7 @@ function renderLtrRoster() {
   if(!campers.length) {
     html += '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No campers yet.</div>';
   } else {
-    html += campers.map(c=>`<div class="card" style="cursor:pointer" onclick="openLtrCamperForm('${c.id}')">
+    html += campers.map(c=>`<div class="card" style="cursor:pointer" onclick="openLtrCamperDetail('${c.id}')">
       <div class="flex-between">
         <div>
           <div class="card-title">${c.name} <span class="badge" style="background:var(--dark3);color:var(--text2)">${c.grade||'—'}</span></div>
@@ -3372,6 +3372,35 @@ function renderLtrRoster() {
     </div>`).join('');
   }
   el.innerHTML = html;
+}
+
+function openLtrCamperDetail(id) {
+  const c = LTR_CAMPERS.find(x=>x.id===id);
+  if(!c) return;
+  const color = AVATAR_COLORS[Math.abs((c.name||'').length*7)%AVATAR_COLORS.length];
+  const initials = (c.name||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('athleteModalContent').innerHTML = `
+    <div class="detail-hero" style="background:${color}">
+      <div class="detail-name">${c.name}</div>
+      <div class="detail-role">${c.grade||'Grade —'} · Camp ${c.camp_session||'—'}</div>
+    </div>
+    <div style="padding:16px">
+      <div class="section-label" style="padding:0">Parent / Guardian Contact</div>
+      <div class="card" style="margin:8px 0 16px">
+        <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2">
+          <div><strong style="color:var(--text)">${c.parent_name||'—'}</strong></div>
+          ${c.parent_email?`<div>${c.parent_email}</div>`:''}
+          ${c.parent_phone?`<div>${c.parent_phone}</div>`:''}
+        </div>
+      </div>
+      ${c.notes?`<div class="section-label" style="padding:0">Notes</div>
+      <div class="card" style="margin:8px 0 16px">
+        <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;color:var(--text2);line-height:1.6">${c.notes}</div>
+      </div>`:''}
+      <button class="submit-btn" onclick="closeAthleteModal(); openLtrCamperForm('${c.id}');">Edit Camper</button>
+      <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="closeAthleteModal()">Close</button>
+    </div>`;
+  document.getElementById('athleteModal').classList.add('open');
 }
 
 function openLtrCamperForm(id) {
