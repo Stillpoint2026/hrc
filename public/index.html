@@ -1911,15 +1911,17 @@ function buildLineup() {
 
 function setLineupSquad(g) { lineupSquadFilter = g; buildLineup(); }
 
+let showLineupArchive = false;
+
 function renderSavedLineups() {
   const el = document.getElementById('savedLineups');
   if(!el) return;
   const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
-  if(!LINEUPS.length) {
-    el.innerHTML = '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No saved lineups yet.</div>';
-    return;
-  }
-  el.innerHTML = LINEUPS.map(l => {
+  const currentRace = lineupRaceLabel();
+  const current = LINEUPS.filter(l=>l.race===currentRace);
+  const older = LINEUPS.filter(l=>l.race!==currentRace);
+
+  const cardHtml = (l) => {
     const bc = BOAT_CLASSES.find(c=>c.id===l.boat_class);
     let seats = [];
     try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
@@ -1937,7 +1939,22 @@ function renderSavedLineups() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html = current.length
+    ? current.map(cardHtml).join('')
+    : '<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No lineups saved for this practice yet.</div>';
+
+  if(older.length) {
+    html += `<div style="padding:12px 0 4px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="toggleLineupArchive()">${showLineupArchive?'Hide':'Show'} ${older.length} older lineup${older.length>1?'s':''}</div>`;
+    if(showLineupArchive) html += older.map(cardHtml).join('');
+  }
+  el.innerHTML = html;
+}
+
+function toggleLineupArchive() {
+  showLineupArchive = !showLineupArchive;
+  renderSavedLineups();
 }
 
 function loadSavedLineup(id) {
