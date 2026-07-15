@@ -827,6 +827,7 @@ body {
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
     <div class="nt coach-only" data-s="ltr" onclick="go('ltr')">Learn to Row</div>
+    <div class="nt" data-s="rankings" onclick="go('rankings')">Leaderboard</div>
     <div class="nt" data-s="documents" onclick="go('documents')">Documents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
   </div>
@@ -952,6 +953,10 @@ body {
       <div class="ql" onclick="go('messages')">
         <div class="ql-label">Team</div>
         <div class="ql-title">Messages</div>
+      </div>
+      <div class="ql" onclick="go('rankings')">
+        <div class="ql-label">Rankings</div>
+        <div class="ql-title">Leaderboard</div>
       </div>
       <div class="ql" onclick="go('absence')">
         <div class="ql-label">Can't Make It?</div>
@@ -1162,6 +1167,16 @@ body {
       <div class="tab" onclick="switchLtrTab('attendance')">Attendance</div>
     </div>
     <div id="ltrTabContent"></div>
+  </div>
+
+  <!-- ERG RANKINGS -->
+  <div class="scr" id="scr-rankings">
+    <div class="scr-hd">
+      <div class="scr-title">Leaderboard</div>
+      <div class="scr-sub">Best times across the team</div>
+    </div>
+    <div class="filter-strip" id="rankingsFilter" style="padding:0 16px 12px;border:none"></div>
+    <div id="rankingsContent"></div>
   </div>
 
   <!-- DOCUMENTS -->
@@ -1535,6 +1550,7 @@ async function initApp() {
   buildParentPortal();
   buildMessages();
   buildDocuments();
+  buildRankings();
   buildLtr();
   populateAbsenceDropdown();
   renderAbsenceList();
@@ -3858,6 +3874,52 @@ async function toggleLtrAttendance(camperId) {
     LTR_ATTENDANCE.push(rec);
   }
   renderLtrAttendance();
+}
+
+// ── ERG RANKINGS ──
+let rankingsTest = '2k';
+
+function setRankingsTest(t) { rankingsTest = t; buildRankings(); }
+
+function buildRankings() {
+  const el = document.getElementById('rankingsContent');
+  const filterEl = document.getElementById('rankingsFilter');
+  if(!el || !filterEl) return;
+
+  filterEl.innerHTML = [{id:'2k',label:'2,000m'},{id:'6k',label:'6,000m'}].map(t=>
+    `<div class="fpill${t.id===rankingsTest?' active':''}" onclick="setRankingsTest('${t.id}')">${t.label}</div>`
+  ).join('');
+
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const ranked = athletes.map(a=>{
+    const scores = ERG_SCORES.filter(e=>e.athlete_id===a.id && (rankingsTest==='2k' ? is2kTest(e.test) : e.test==='6k'));
+    const best = scores.sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+    return best ? {athlete:a, time:best.time_seconds, date:best.date} : null;
+  }).filter(Boolean).sort((a,b)=>a.time-b.time);
+
+  if(!ranked.length) {
+    el.innerHTML = `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No ${rankingsTest==='2k'?'2k':'6k'} times recorded yet.</div>`;
+    return;
+  }
+
+  el.innerHTML = ranked.map((r,i)=>{
+    const sm = sideMeta(r.athlete.side);
+    return `<div class="card" onclick="openAthleteDetail('${r.athlete.id}')" style="cursor:pointer">
+      <div class="flex-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:22px;font-family:-apple-system,sans-serif;font-weight:600;font-size:14px;color:${i<3?'var(--crimson)':'var(--text3)'}">${i+1}</div>
+          <div>
+            <div class="card-title" style="display:flex;align-items:center;gap:6px">
+              ${sm?`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${sm.color};flex-shrink:0"></span>`:''}
+              ${r.athlete.name}
+            </div>
+            <div class="card-sub">${r.athlete.group||''}${r.date?' · '+r.date:''}</div>
+          </div>
+        </div>
+        <div style="font-family:'Courier New',monospace;font-size:16px;color:var(--text)">${fmtTime(r.time)}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function buildDocuments() {
