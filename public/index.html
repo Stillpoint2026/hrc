@@ -1210,6 +1210,10 @@ body {
       <button class="submit-btn" onclick="submitAbsence()">Submit Absence Report</button>
       <div id="absMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
     </div>
+    <div class="coach-only">
+      <div class="section-label" style="padding:20px 16px 4px">Submitted Absences</div>
+      <div id="absenceListContent"></div>
+    </div>
   </div>
 
 </div><!-- /appShell -->
@@ -1533,6 +1537,7 @@ async function initApp() {
   buildDocuments();
   buildLtr();
   populateAbsenceDropdown();
+  renderAbsenceList();
   fetchWeather();
   go('home');
   setInterval(messagePoll, 8000);
@@ -2091,6 +2096,41 @@ function buildLineupBoard() {
   document.getElementById('lineupBoard').innerHTML = html;
 }
 
+async function quickMarkAbsent(athleteId, event) {
+  if(event) event.stopPropagation();
+  const a = ATHLETES.find(x=>x.id===athleteId);
+  if(!a) return;
+  const today = fmtDate(new Date());
+  const dates = prompt(`Mark ${a.name} absent — date(s):`, today);
+  if(!dates) return;
+  const reason = prompt('Reason (optional):') || '';
+  const record = {
+    club: HRC_CLUB,
+    athlete_id: athleteId,
+    athlete_name: a.name,
+    dates, session: 'All Day',
+    reason: reason ? reason+' (logged by coach)' : 'Logged by coach — athlete did not self-report',
+    submitted_by: CU.id,
+    created_at: new Date().toISOString()
+  };
+  await supaInsert('hrc_absences', record);
+  ABSENCES.unshift(record);
+  toast(`Marked ${a.name} absent`);
+  switchCoachTab('attendance');
+  renderAbsenceList();
+}
+
+function attendancePercentForAthlete(athleteId) {
+  if(!SESSIONS.length) return null;
+  const absRecs = ABSENCES.filter(ab=>ab.athlete_id===athleteId);
+  if(!absRecs.length) return 100;
+  let absentCount = 0;
+  SESSIONS.forEach(s=>{
+    if(absRecs.some(ab=>dateTextMatches(ab.dates, s.date))) absentCount++;
+  });
+  return Math.round(((SESSIONS.length - absentCount)/SESSIONS.length)*100);
+}
+
 function dateTextMatches(text, isoDate) {
   if(!text || !isoDate) return false;
   const d = new Date(isoDate+'T00:00:00');
@@ -2284,22 +2324,19 @@ function switchCoachTab(tab) {
     }).join('') || '<div class="section" style="color:var(--text3)">No athletes yet.</div>';
 
   } else if(tab==='attendance') {
-    const todayStr = fmtDate(new Date());
-    const sortedAbs = ABSENCES.slice(0,60).sort((a,b)=>{
-      const aToday = dateTextMatches(a.dates, todayStr) ? 0 : 1;
-      const bToday = dateTextMatches(b.dates, todayStr) ? 0 : 1;
-      return aToday - bToday;
-    });
-    el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Recent Absences</div>`+
-      (sortedAbs.map(ab=>{
-        const a = ATHLETES.find(x=>x.id===ab.athlete_id);
-        const isToday = dateTextMatches(ab.dates, todayStr);
-        const nameColor = isToday ? 'var(--text)' : '#e05c5c';
+    const rows = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+    el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Attendance</div>`+
+      (rows.map(a=>{
+        const pct = attendancePercentForAthlete(a.id);
+        const pctColor = pct===null ? 'var(--text3)' : pct>=90 ? 'var(--green)' : pct>=75 ? 'var(--text)' : '#e05c5c';
         return `<div class="coach-athlete-row">
-          <div class="cah-name" style="color:${nameColor}">${a?.name||ab.athlete_name||'Unknown'}</div>
-          <div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">${ab.dates||''} · ${ab.session||''} ${ab.reason?'· '+ab.reason:''}</div>
+          <div class="flex-between" onclick="openAthleteDetail('${a.id}')" style="cursor:pointer">
+            <div class="cah-name">${a.name}${a.group?` <span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>`:''}</div>
+            <div style="font-family:'Courier New',monospace;font-size:16px;color:${pctColor}">${pct===null?'—':pct+'%'}</div>
+          </div>
+          <div style="margin-top:6px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;cursor:pointer" onclick="quickMarkAbsent('${a.id}', event)">+ Mark Absent</div>
         </div>`;
-      }).join('')||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No absences recorded.</div>');
+      }).join('')||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No athletes yet.</div>');
 
   } else if(tab==='erg') {
     el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Best 2k Times</div>`+
@@ -4018,6 +4055,27 @@ async function submitAbsence() {
   document.getElementById('absDates').value='';
   document.getElementById('absReason').value='';
   toast('Absence reported');
+  renderAbsenceList();
+}
+
+function renderAbsenceList() {
+  const el = document.getElementById('absenceListContent');
+  if(!el) return;
+  const todayStr = fmtDate(new Date());
+  const sorted = ABSENCES.slice(0,60).sort((a,b)=>{
+    const aToday = dateTextMatches(a.dates, todayStr) ? 0 : 1;
+    const bToday = dateTextMatches(b.dates, todayStr) ? 0 : 1;
+    return aToday - bToday;
+  });
+  el.innerHTML = sorted.map(ab=>{
+    const a = ATHLETES.find(x=>x.id===ab.athlete_id);
+    const isToday = dateTextMatches(ab.dates, todayStr);
+    const nameColor = isToday ? 'var(--text)' : '#e05c5c';
+    return `<div class="coach-athlete-row">
+      <div class="cah-name" style="color:${nameColor}">${a?.name||ab.athlete_name||'Unknown'}</div>
+      <div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">${ab.dates||''} · ${ab.session||''} ${ab.reason?'· '+ab.reason:''}</div>
+    </div>`;
+  }).join('') || '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No absences recorded.</div>';
 }
 
 // ════════════════════════════════════════════
