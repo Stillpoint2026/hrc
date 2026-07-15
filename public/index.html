@@ -1076,6 +1076,7 @@ body {
       <div class="section-label">Squad</div>
       <div class="filter-strip" style="padding:0;border:none" id="lineupSquadFilter"></div>
     </div>
+    <div id="lineupAbsentPanel"></div>
     <div id="lineupBoard"></div>
     <div class="p16">
       <button class="submit-btn coach-only" onclick="saveLineup()">Save Lineup</button>
@@ -2125,9 +2126,34 @@ function loadSavedLineup(id) {
 
 function setBoatClass(cls) { lineupBoatClass=cls; editingLineupId=null; buildLineup(); }
 
+function renderLineupAbsentPanel() {
+  const el = document.getElementById('lineupAbsentPanel');
+  if(!el) return;
+  const dateVal = document.getElementById('lineupDate')?.value;
+  if(!dateVal) { el.innerHTML = ''; return; }
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const absentToday = athletes.map(a=>{
+    const rec = ABSENCES.filter(ab=>ab.athlete_id===a.id).find(ab=>dateTextMatches(ab.dates, dateVal));
+    return rec ? {name:a.name, reason:rec.reason||'', dates:rec.dates||''} : null;
+  }).filter(Boolean);
+
+  if(!absentToday.length) {
+    el.innerHTML = `<div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">No reported absences for this date.</div>`;
+    return;
+  }
+  const dLabel = new Date(dateVal+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  el.innerHTML = `<div class="card" style="margin:0 16px 12px;border-color:#e05c5c">
+    <div style="font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#e05c5c;margin-bottom:8px">Absent — ${dLabel} (${absentToday.length})</div>
+    ${absentToday.map(p=>`<div style="padding:4px 0;font-family:-apple-system,sans-serif;font-size:13px;color:var(--text)">
+      <strong>${p.name}</strong>${p.reason?` <span style="color:var(--text3);font-weight:200">— ${p.reason}</span>`:''}
+    </div>`).join('')}
+  </div>`;
+}
+
 function buildLineupBoard() {
   const bc = BOAT_CLASSES.find(c=>c.id===lineupBoatClass);
   if(!bc) return;
+  renderLineupAbsentPanel();
   const race = lineupRaceLabel();
   const key = race+'|'+lineupBoatClass;
   if(!lineupData[key]) lineupData[key] = Array(bc.seats).fill(null);
