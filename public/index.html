@@ -826,8 +826,8 @@ body {
     <div class="nt hide-from-parent" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
-    <div class="nt coach-only" data-s="ltr" onclick="go('ltr')">Learn to Row</div>
-    <div class="nt boathouse-only" data-s="boathouse" onclick="go('boathouse')">The Boathouse</div>
+    <div class="nt coach-cox-only" data-s="ltr" onclick="go('ltr')">Learn to Row</div>
+    <div class="nt coach-cox-only" data-s="boathouse" onclick="go('boathouse')">The Boathouse</div>
     <div class="nt" data-s="rankings" onclick="go('rankings')">Leaderboard</div>
     <div class="nt" data-s="documents" onclick="go('documents')">Documents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
@@ -963,11 +963,11 @@ body {
         <div class="ql-label">Coaches</div>
         <div class="ql-title">Coach Hub</div>
       </div>
-      <div class="ql coach-only" onclick="go('ltr')">
+      <div class="ql coach-cox-only" onclick="go('ltr')">
         <div class="ql-label">Summer Camps</div>
         <div class="ql-title">Learn to Row</div>
       </div>
-      <div class="ql boathouse-only" onclick="go('boathouse')">
+      <div class="ql coach-cox-only" onclick="go('boathouse')">
         <div class="ql-label">Gear & Supplies</div>
         <div class="ql-title">The Boathouse</div>
       </div>
@@ -1579,7 +1579,7 @@ async function initApp() {
   const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
   const me = ATHLETES.find(a=>a.id===CU.member_id);
   const isCox = me?.side === 'cox';
-  document.querySelectorAll('.boathouse-only').forEach(el=>{
+  document.querySelectorAll('.coach-cox-only').forEach(el=>{
     el.style.display = (isCoachRole || isCox) ? '' : 'none';
   });
   buildHome();
@@ -1762,12 +1762,12 @@ function go(screen) {
     toast("This section isn't available for parent accounts");
     screen = 'home';
   }
-  if(CU && screen==='boathouse') {
+  if(CU && ['boathouse','ltr'].includes(screen)) {
     const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
     const me = ATHLETES.find(a=>a.id===CU.member_id);
     const isCox = me?.side === 'cox';
     if(!isCoachRole && !isCox) {
-      toast("The Boathouse is only available to coaches and coxswains");
+      toast("This section is only available to coaches and coxswains");
       screen = 'home';
     }
   }
