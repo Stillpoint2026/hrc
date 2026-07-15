@@ -1945,6 +1945,14 @@ function raceMatchesCurrent(savedRace, currentRace) {
   return false;
 }
 
+let expandedLineupId = null;
+
+function toggleLineupExpand(id, event) {
+  if(event) event.stopPropagation();
+  expandedLineupId = expandedLineupId===id ? null : id;
+  renderSavedLineups();
+}
+
 function renderSavedLineups() {
   const el = document.getElementById('savedLineups');
   if(!el) return;
@@ -1970,17 +1978,39 @@ function renderSavedLineups() {
     const filled = seats.filter(Boolean).length;
     const dt = l.updated_at ? new Date(l.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
     const titleColor = isCurrent ? 'var(--text)' : '#e05c5c';
-    return `<div class="card" style="cursor:pointer" onclick="loadSavedLineup('${l.id}')">
+    const expanded = expandedLineupId === l.id;
+
+    const seatRows = seats.map((seat,i)=>{
+      const seatNum = (bc?.seats||seats.length) - i;
+      const a = seat ? ATHLETES.find(x=>x.name===seat) : null;
+      const sm = a ? sideMeta(a.side) : null;
+      return `<div style="display:flex;align-items:center;padding:4px 0;font-family:-apple-system,sans-serif;font-size:12px;color:var(--text2)">
+        <span style="width:22px;color:var(--text3)">${seatNum}</span>
+        ${sm?`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${sm.color};margin-right:6px;flex-shrink:0"></span>`:''}
+        <span>${seat||'—'}</span>
+      </div>`;
+    }).join('');
+
+    const coxA = l.cox ? ATHLETES.find(x=>x.name===l.cox) : null;
+    const coxSm = coxA ? sideMeta(coxA.side) : null;
+    const coxRow = l.boat_class!=='pair' || l.cox ? `<div style="display:flex;align-items:center;padding:4px 0;font-family:-apple-system,sans-serif;font-size:12px;color:var(--text2)">
+      <span style="width:22px;color:var(--text3)">Cox</span>
+      ${coxSm?`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${coxSm.color};margin-right:6px;flex-shrink:0"></span>`:''}
+      <span>${l.cox||'—'}</span>
+    </div>` : '';
+
+    return `<div class="card" style="cursor:pointer" onclick="toggleLineupExpand('${l.id}', event)">
       <div class="flex-between">
         <div>
           <div class="card-title" style="color:${titleColor}">${l.race||'—'} · ${bc?bc.label:l.boat_class}${l.boat_label?' · '+l.boat_label:''}${l.boat_name?' · '+l.boat_name:''}</div>
           <div class="card-sub">${filled}/${seats.length||'—'} seats${l.cox?' + cox':''} · saved ${dt}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase">Load</div>
+          <div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--crimson);letter-spacing:.08em;text-transform:uppercase" onclick="event.stopPropagation(); loadSavedLineup('${l.id}');">Load</div>
           ${isCoach?`<div style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase" onclick="deleteLineup('${l.id}', event)">Delete</div>`:''}
         </div>
       </div>
+      ${expanded?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">${seatRows}${coxRow}</div>`:''}
     </div>`;
   }).join('');
 }
