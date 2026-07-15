@@ -958,10 +958,6 @@ body {
         <div class="ql-label">Rankings</div>
         <div class="ql-title">Leaderboard</div>
       </div>
-      <div class="ql" onclick="go('absence')">
-        <div class="ql-label">Can't Make It?</div>
-        <div class="ql-title">Report Absence</div>
-      </div>
       <div class="ql coach-only" onclick="go('coach')">
         <div class="ql-label">Coaches</div>
         <div class="ql-title">Coach Hub</div>
@@ -2381,7 +2377,7 @@ function switchCoachTab(tab) {
       }).join('') || '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No workouts logged.</div>';
 
   } else if(tab==='absences') {
-    switchCoachTab('attendance');
+    el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Submitted Absences</div>` + buildAbsenceListHtml();
 
   } else if(tab==='shifts') {
     renderShifts();
@@ -4151,16 +4147,14 @@ async function submitAbsence() {
   renderAbsenceList();
 }
 
-function renderAbsenceList() {
-  const el = document.getElementById('absenceListContent');
-  if(!el) return;
+function buildAbsenceListHtml() {
   const todayStr = fmtDate(new Date());
   const sorted = ABSENCES.slice(0,60).sort((a,b)=>{
     const aToday = dateTextMatches(a.dates, todayStr) ? 0 : 1;
     const bToday = dateTextMatches(b.dates, todayStr) ? 0 : 1;
     return aToday - bToday;
   });
-  el.innerHTML = sorted.map(ab=>{
+  return sorted.map(ab=>{
     const a = ATHLETES.find(x=>x.id===ab.athlete_id);
     const isToday = dateTextMatches(ab.dates, todayStr);
     const nameColor = isToday ? 'var(--text)' : '#e05c5c';
@@ -4169,6 +4163,12 @@ function renderAbsenceList() {
       <div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">${ab.dates||''} · ${ab.session||''} ${ab.reason?'· '+ab.reason:''}</div>
     </div>`;
   }).join('') || '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No absences recorded.</div>';
+}
+
+function renderAbsenceList() {
+  const el = document.getElementById('absenceListContent');
+  if(!el) return;
+  el.innerHTML = buildAbsenceListHtml();
 }
 
 // ════════════════════════════════════════════
