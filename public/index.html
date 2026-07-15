@@ -1095,6 +1095,7 @@ body {
       <div class="tab" onclick="switchCoachTab('oars')">Oars</div>
       <div class="tab" onclick="switchCoachTab('parents')">Parents</div>
       <div class="tab" onclick="switchCoachTab('rigging')">Rigging</div>
+      <div class="tab" onclick="switchCoachTab('compliance')">Compliance</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
@@ -1972,6 +1973,12 @@ function buildLineupBoard() {
 
   const boatName = lineupData[key+'|boat']||null;
   const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
+  const dotFor = (name) => {
+    if(!name) return '';
+    const a = ATHLETES.find(x=>x.name===name);
+    const sm = a ? sideMeta(a.side) : null;
+    return sm ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${sm.color};margin-right:6px;flex-shrink:0"></span>` : '';
+  };
   let html = `<div class="boat-diagram">
     <div class="boat-hd">
       <span class="boat-label">${bc.label} — ${race.split('—')[0].trim()}</span>
@@ -1987,15 +1994,15 @@ function buildLineupBoard() {
     ${seats.map((seat,i)=>`
       <div class="seat-row">
         <div class="seat-num">${bc.seats-i}</div>
-        <div class="seat-slot${seat?' filled':''}" ${isCoach?`onclick="assignSeat('${key}',${i})"`:''}>
-          ${seat||`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
+        <div class="seat-slot${seat?' filled':''}" style="display:flex;align-items:center" ${isCoach?`onclick="assignSeat('${key}',${i})"`:''}>
+          ${seat?dotFor(seat)+seat:`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
         </div>
         <div class="seat-side">${sides[i]}</div>
       </div>`).join('')}
     ${lineupBoatClass!=='pair'?`<div class="seat-row" style="border-top:1px solid var(--border2)">
       <div class="seat-num" style="color:var(--text3)">Cox</div>
-      <div class="seat-slot${lineupData[key+'|cox']?' filled':''}" ${isCoach?`onclick="assignCox('${key}')"`:''}>
-        ${lineupData[key+'|cox']||`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
+      <div class="seat-slot${lineupData[key+'|cox']?' filled':''}" style="display:flex;align-items:center" ${isCoach?`onclick="assignCox('${key}')"`:''}>
+        ${lineupData[key+'|cox']?dotFor(lineupData[key+'|cox'])+lineupData[key+'|cox']:`<span style="color:var(--text3);font-family:-apple-system,sans-serif;font-size:11px">${isCoach?'Tap to assign':'Unassigned'}</span>`}
       </div>
       <div class="seat-side"></div>
     </div>`:''}
@@ -2058,7 +2065,7 @@ function assignSeat(key, idx) {
   const notes = [];
   if(absentCount) notes.push(`${absentCount} hidden — reported absent`);
   if(takenCount) notes.push(`${takenCount} hidden — already in another boat this practice`);
-  const items = athletes.map(a=>({label:a.name, sub:[a.group,sideMeta(a.side)?.label].filter(Boolean).join(' · '), value:a.name}));
+  const items = athletes.map(a=>({label:a.name, sub:[a.group,sideMeta(a.side)?.label].filter(Boolean).join(' · '), value:a.name, color:sideMeta(a.side)?.color}));
   openPicker('Assign Seat '+seatNum, items, (val)=>{ lineupData[key][idx]=val; buildLineupBoard(); }, {note:notes.join(' · ')});
 }
 
@@ -2074,7 +2081,7 @@ function assignCox(key) {
   const notes = [];
   if(absentCount) notes.push(`${absentCount} hidden — reported absent`);
   if(takenCount) notes.push(`${takenCount} hidden — already in another boat this practice`);
-  const items = athletes.map(a=>({label:a.name, sub:[a.group,sideMeta(a.side)?.label].filter(Boolean).join(' · '), value:a.name}));
+  const items = athletes.map(a=>({label:a.name, sub:[a.group,sideMeta(a.side)?.label].filter(Boolean).join(' · '), value:a.name, color:sideMeta(a.side)?.color}));
   openPicker('Assign Coxswain', items, (val)=>{ lineupData[key+'|cox']=val; buildLineupBoard(); }, {note:notes.join(' · ')});
 }
 
@@ -2249,6 +2256,10 @@ function switchCoachTab(tab) {
 
   } else if(tab==='rigging') {
     renderRigging();
+    return;
+
+  } else if(tab==='compliance') {
+    renderCompliance();
     return;
 
   } else if(tab==='profile') {
@@ -2507,6 +2518,46 @@ const RIGGING_DATA = {
 let riggingClass = 'eight';
 
 function setRiggingClass(cls) { riggingClass = cls; renderRigging(); }
+
+// ── COMPLIANCE (Dues / Waivers) ──
+function renderCompliance() {
+  const el = document.getElementById('coachTabContent');
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  const duesCount = athletes.filter(a=>a.dues_paid).length;
+  const waiverCount = athletes.filter(a=>a.waiver_received).length;
+
+  let html = `<div style="padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Dues &amp; Waivers</div>
+    <div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;margin-top:4px">${duesCount}/${athletes.length} dues paid · ${waiverCount}/${athletes.length} waivers received</div>
+  </div>
+  <div style="display:flex;padding:8px 16px 6px;font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">
+    <div style="flex:1">Athlete</div>
+    <div style="width:60px;text-align:center">Dues</div>
+    <div style="width:70px;text-align:center">Waiver</div>
+  </div>`;
+
+  html += athletes.map(a=>`<div class="card" style="display:flex;align-items:center;padding:12px 16px">
+    <div style="flex:1;font-family:-apple-system,sans-serif;font-size:14px;color:var(--text)">${a.name}${a.group?` <span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>`:''}</div>
+    <div style="width:60px;text-align:center" onclick="toggleCompliance('${a.id}','dues_paid',event)">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:${a.dues_paid?'var(--green)':'transparent'};border:1.5px solid ${a.dues_paid?'var(--green)':'var(--border2)'};cursor:pointer;color:#fff;font-size:13px">${a.dues_paid?'✓':''}</span>
+    </div>
+    <div style="width:70px;text-align:center" onclick="toggleCompliance('${a.id}','waiver_received',event)">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:${a.waiver_received?'var(--green)':'transparent'};border:1.5px solid ${a.waiver_received?'var(--green)':'var(--border2)'};cursor:pointer;color:#fff;font-size:13px">${a.waiver_received?'✓':''}</span>
+    </div>
+  </div>`).join('');
+
+  el.innerHTML = html;
+}
+
+async function toggleCompliance(athleteId, field, event) {
+  if(event) event.stopPropagation();
+  const a = ATHLETES.find(x=>x.id===athleteId);
+  if(!a) return;
+  const next = !a[field];
+  a[field] = next;
+  renderCompliance();
+  await supaPatch('hrc_members', {id: athleteId}, {[field]: next});
+}
 
 function renderRigging() {
   const el = document.getElementById('coachTabContent');
@@ -3273,7 +3324,10 @@ function openPicker(title, items, onSelect, opts) {
       ${opts.note?`<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;padding:0 0 10px">${opts.note}</div>`:''}
       ${clearable?`<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="pickerSelect(null)"><div class="card-title" style="color:var(--text3)">Clear / Unassigned</div></div>`:''}
       ${items.map((it,i)=>`<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="pickerSelect(${i})">
-        <div class="card-title">${it.label}</div>
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          ${it.color?`<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${it.color};flex-shrink:0"></span>`:''}
+          ${it.label}
+        </div>
         ${it.sub?`<div class="card-sub">${it.sub}</div>`:''}
       </div>`).join('')}
       ${!items.length?'<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:12px 0">No options available.</div>':''}
