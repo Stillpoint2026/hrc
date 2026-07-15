@@ -1093,7 +1093,6 @@ body {
       <div class="tab" onclick="switchCoachTab('attendance')">Attendance</div>
       <div class="tab" onclick="switchCoachTab('erg')">Erg Scores</div>
       <div class="tab" onclick="switchCoachTab('workouts')">Workouts</div>
-      <div class="tab" onclick="switchCoachTab('absences')">Absences</div>
       <div class="tab" onclick="switchCoachTab('shifts')">Shifts</div>
       <div class="tab" onclick="switchCoachTab('boats')">Boats</div>
       <div class="tab" onclick="switchCoachTab('oars')">Oars</div>
@@ -2108,6 +2107,13 @@ function buildLineupBoard() {
   document.getElementById('lineupBoard').innerHTML = html;
 }
 
+let expandedAttendanceId = null;
+
+function toggleAttendanceExpand(athleteId) {
+  expandedAttendanceId = expandedAttendanceId === athleteId ? null : athleteId;
+  switchCoachTab('attendance');
+}
+
 async function quickMarkAbsent(athleteId, event) {
   if(event) event.stopPropagation();
   const a = ATHLETES.find(x=>x.id===athleteId);
@@ -2128,6 +2134,7 @@ async function quickMarkAbsent(athleteId, event) {
   await supaInsert('hrc_absences', record);
   ABSENCES.unshift(record);
   toast(`Marked ${a.name} absent`);
+  expandedAttendanceId = athleteId;
   switchCoachTab('attendance');
   renderAbsenceList();
 }
@@ -2337,16 +2344,31 @@ function switchCoachTab(tab) {
 
   } else if(tab==='attendance') {
     const rows = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+    const todayStr = fmtDate(new Date());
     el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Attendance</div>`+
       (rows.map(a=>{
         const pct = attendancePercentForAthlete(a.id);
         const pctColor = pct===null ? 'var(--text3)' : pct>=90 ? 'var(--green)' : pct>=75 ? 'var(--text)' : '#e05c5c';
+        const expanded = expandedAttendanceId === a.id;
+        const myAbsences = ABSENCES.filter(ab=>ab.athlete_id===a.id).sort((x,y)=>{
+          const xToday = dateTextMatches(x.dates, todayStr) ? 0 : 1;
+          const yToday = dateTextMatches(y.dates, todayStr) ? 0 : 1;
+          return xToday - yToday;
+        });
+        const logHtml = myAbsences.length
+          ? myAbsences.map(ab=>{
+              const isToday = dateTextMatches(ab.dates, todayStr);
+              const color = isToday ? 'var(--text)' : '#e05c5c';
+              return `<div style="padding:4px 0;font-family:-apple-system,sans-serif;font-size:12px;color:${color}">${ab.dates||''} · ${ab.session||''}${ab.reason?' · '+ab.reason:''}</div>`;
+            }).join('')
+          : '<div style="padding:4px 0;font-family:-apple-system,sans-serif;font-size:12px;color:var(--text3)">No missed days on record.</div>';
         return `<div class="coach-athlete-row">
-          <div class="flex-between" onclick="openAthleteDetail('${a.id}')" style="cursor:pointer">
+          <div class="flex-between" onclick="toggleAttendanceExpand('${a.id}')" style="cursor:pointer">
             <div class="cah-name">${a.name}${a.group?` <span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>`:''}</div>
             <div style="font-family:'Courier New',monospace;font-size:16px;color:${pctColor}">${pct===null?'—':pct+'%'}</div>
           </div>
           <div style="margin-top:6px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;cursor:pointer" onclick="quickMarkAbsent('${a.id}', event)">+ Mark Absent</div>
+          ${expanded?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">${logHtml}</div>`:''}
         </div>`;
       }).join('')||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No athletes yet.</div>');
 
