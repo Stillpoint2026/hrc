@@ -4460,12 +4460,30 @@ async function submitAbsence() {
   };
   await supaInsert('hrc_absences', record);
   ABSENCES.unshift(record);
+  await notifyCoachesOfAbsence(athlete?.name||'Someone', dates, absSessionVal, reason);
   msgEl.textContent='Absence reported — coaching staff notified.';
   msgEl.style.color='var(--green)';msgEl.style.display='block';
   document.getElementById('absDates').value='';
   document.getElementById('absReason').value='';
   toast('Absence reported');
   renderAbsenceList();
+}
+
+async function notifyCoachesOfAbsence(athleteName, dates, session, reason) {
+  const now = new Date().toISOString();
+  const body = `Absence reported: ${athleteName} — ${dates}${session?' ('+session+')':''}${reason?'. Reason: '+reason:''}`;
+  let thread = THREADS.find(t=>t.kind==='coach');
+  if(!thread) {
+    thread = {id:crypto.randomUUID(), club:HRC_CLUB, kind:'coach', athlete_id:null, group_tag:null, title:'Coaching Staff', created_by:CU.id, created_by_name:CU.name, created_at:now, last_message_at:now, last_message_preview:body.slice(0,80)};
+    const res = await supaInsert('hrc_threads', thread);
+    if(!res) return;
+    THREADS.unshift(thread);
+  }
+  const message = {id:crypto.randomUUID(), thread_id:thread.id, club:HRC_CLUB, sender_id:CU.id, sender_name:CU.name, sender_role:CU.role, body, created_at:now};
+  await supaInsert('hrc_messages', message);
+  await supaPatch('hrc_threads', {id: thread.id}, {last_message_at: now, last_message_preview: body.slice(0,80)});
+  thread.last_message_at = now;
+  thread.last_message_preview = body.slice(0,80);
 }
 
 function buildAbsenceListHtml() {
