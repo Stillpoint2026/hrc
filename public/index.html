@@ -1124,6 +1124,7 @@ body {
       <div class="tab" onclick="switchAthleteTab('lifting')">Lifting</div>
       <div class="tab" onclick="switchAthleteTab('core')">Core</div>
       <div class="tab" onclick="switchAthleteTab('resources')">Resources</div>
+      <div class="tab" onclick="go('messages')">Messages</div>
     </div>
     <div id="athleteTabContent"></div>
   </div>
@@ -3692,7 +3693,8 @@ async function openAddAnnouncement() {
   const title = prompt('Notice title (e.g. Schedule Change):'); if(!title) return;
   const body = prompt('Notice text:'); if(!body) return;
   const rec = {id:crypto.randomUUID(),club:HRC_CLUB,title,body,posted_by:CU.id,posted_by_name:CU.name,created_at:new Date().toISOString()};
-  await supaInsert('hrc_announcements', rec);
+  const res = await supaInsert('hrc_announcements', rec);
+  if(!res) { toast('Failed to save notice — try again'); return; }
   ANNOUNCEMENTS.unshift(rec);
   if(currentScreen==='athlete') switchAthleteTab('noticeboard');
   else switchParentTab('updates');
