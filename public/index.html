@@ -1934,6 +1934,17 @@ function buildLineup() {
 
 function setLineupSquad(g) { lineupSquadFilter = g; buildLineup(); }
 
+function raceMatchesCurrent(savedRace, currentRace) {
+  if(savedRace === currentRace) return true;
+  // Backward-compat: lineups saved before AM/PM sessions existed have no
+  // session suffix on practice races (just "Practice — DATE").
+  if(currentRace.startsWith('Practice — ')) {
+    const currentDate = currentRace.replace('Practice — ','').split(' ')[0];
+    if(savedRace === 'Practice — ' + currentDate) return true;
+  }
+  return false;
+}
+
 function renderSavedLineups() {
   const el = document.getElementById('savedLineups');
   if(!el) return;
@@ -1946,13 +1957,13 @@ function renderSavedLineups() {
   }
 
   const sorted = LINEUPS.slice().sort((a,b)=>{
-    const aCur = a.race===currentRace ? 0 : 1;
-    const bCur = b.race===currentRace ? 0 : 1;
+    const aCur = raceMatchesCurrent(a.race, currentRace) ? 0 : 1;
+    const bCur = raceMatchesCurrent(b.race, currentRace) ? 0 : 1;
     return aCur - bCur;
   });
 
   el.innerHTML = sorted.map(l => {
-    const isCurrent = l.race===currentRace;
+    const isCurrent = raceMatchesCurrent(l.race, currentRace);
     const bc = BOAT_CLASSES.find(c=>c.id===l.boat_class);
     let seats = [];
     try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
