@@ -2091,20 +2091,23 @@ function buildLineupBoard() {
   document.getElementById('lineupBoard').innerHTML = html;
 }
 
-function absentOn(athleteId, isoDate) {
-  if(!isoDate) return false;
-  const recs = ABSENCES.filter(ab=>ab.athlete_id===athleteId);
-  if(!recs.length) return false;
+function dateTextMatches(text, isoDate) {
+  if(!text || !isoDate) return false;
   const d = new Date(isoDate+'T00:00:00');
   const md1 = (d.getMonth()+1)+'/'+d.getDate();
   const md2 = String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0');
   const monthLong = d.toLocaleDateString('en-US',{month:'long'}).toLowerCase();
   const monthShort = d.toLocaleDateString('en-US',{month:'short'}).toLowerCase();
   const day = d.getDate();
-  return recs.some(ab=>{
-    const txt = (ab.dates||'').toLowerCase();
-    return txt.includes(md1) || txt.includes(md2) || txt.includes(monthLong+' '+day) || txt.includes(monthShort+' '+day) || txt.includes(isoDate);
-  });
+  const txt = text.toLowerCase();
+  return txt.includes(md1) || txt.includes(md2) || txt.includes(monthLong+' '+day) || txt.includes(monthShort+' '+day) || txt.includes(isoDate);
+}
+
+function absentOn(athleteId, isoDate) {
+  if(!isoDate) return false;
+  const recs = ABSENCES.filter(ab=>ab.athlete_id===athleteId);
+  if(!recs.length) return false;
+  return recs.some(ab=>dateTextMatches(ab.dates, isoDate));
 }
 
 // Names already committed to a boat in this race — across every boat class
@@ -2281,11 +2284,19 @@ function switchCoachTab(tab) {
     }).join('') || '<div class="section" style="color:var(--text3)">No athletes yet.</div>';
 
   } else if(tab==='attendance') {
+    const todayStr = fmtDate(new Date());
+    const sortedAbs = ABSENCES.slice(0,60).sort((a,b)=>{
+      const aToday = dateTextMatches(a.dates, todayStr) ? 0 : 1;
+      const bToday = dateTextMatches(b.dates, todayStr) ? 0 : 1;
+      return aToday - bToday;
+    });
     el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Recent Absences</div>`+
-      (ABSENCES.slice(0,30).map(ab=>{
+      (sortedAbs.map(ab=>{
         const a = ATHLETES.find(x=>x.id===ab.athlete_id);
+        const isToday = dateTextMatches(ab.dates, todayStr);
+        const nameColor = isToday ? 'var(--text)' : '#e05c5c';
         return `<div class="coach-athlete-row">
-          <div class="cah-name">${a?.name||ab.athlete_name||'Unknown'}</div>
+          <div class="cah-name" style="color:${nameColor}">${a?.name||ab.athlete_name||'Unknown'}</div>
           <div style="font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">${ab.dates||''} · ${ab.session||''} ${ab.reason?'· '+ab.reason:''}</div>
         </div>`;
       }).join('')||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No absences recorded.</div>');
