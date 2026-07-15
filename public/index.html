@@ -1330,6 +1330,7 @@ let SHIFTS = [];
 let BOATS = [];
 let boatEditId = null;
 let OARS = [];
+let RIGGING_SETTINGS = [];
 let oarEditId = null;
 let THREADS = [];
 let MESSAGES = [];
@@ -1516,7 +1517,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings()]);
   await linkMemberRecord();
   buildHome();
   buildSchedule();
@@ -1593,6 +1594,11 @@ async function loadBoats() {
 async function loadOars() {
   const rows = await supaGet('hrc_oars', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '300'});
   OARS = rows || [];
+}
+
+async function loadRiggingSettings() {
+  const rows = await supaGet('hrc_rigging_settings', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '100'});
+  RIGGING_SETTINGS = rows || [];
 }
 
 async function loadThreads() {
@@ -2509,15 +2515,22 @@ function switchAthleteTab(tab) {
 }
 
 // ── BOAT INVENTORY ──
-// ── RIGGING GUIDE ──
-const RIGGING_DATA = {
-  eight: { label:'8+', spread:'79–80 cm', oarLength:'376–379 cm', inboard:'114–116 cm', pitch:'4° stern', oarlockHeight:'15–16 cm above seat' },
-  four:  { label:'4+', spread:'79–80 cm', oarLength:'376–379 cm', inboard:'114–116 cm', pitch:'4° stern', oarlockHeight:'15–16 cm above seat' },
-  pair:  { label:'2+', spread:'80–81 cm', oarLength:'373–376 cm', inboard:'113–115 cm', pitch:'4° stern', oarlockHeight:'16–17 cm above seat' },
+// ── RIGGING GUIDE (editable, per manufacturer) ──
+const RIGGING_MANUFACTURERS = ['Generic','Empacher','Hudson'];
+const RIGGING_DEFAULTS = {
+  eight: { spread:'79–80 cm', oarLength:'376–379 cm', inboard:'114–116 cm', pitch:'4° stern', oarlockHeight:'15–16 cm above seat' },
+  four:  { spread:'79–80 cm', oarLength:'376–379 cm', inboard:'114–116 cm', pitch:'4° stern', oarlockHeight:'15–16 cm above seat' },
+  pair:  { spread:'80–81 cm', oarLength:'373–376 cm', inboard:'113–115 cm', pitch:'4° stern', oarlockHeight:'16–17 cm above seat' },
 };
 let riggingClass = 'eight';
+let riggingManufacturer = 'Generic';
 
 function setRiggingClass(cls) { riggingClass = cls; renderRigging(); }
+function setRiggingManufacturer(m) { riggingManufacturer = m; renderRigging(); }
+
+function getRiggingSetting(manufacturer, boatClass) {
+  return RIGGING_SETTINGS.find(r=>r.manufacturer===manufacturer && r.boat_class===boatClass);
+}
 
 // ── COMPLIANCE (Dues / Waivers) ──
 function renderCompliance() {
@@ -2561,27 +2574,43 @@ async function toggleCompliance(athleteId, field, event) {
 
 function renderRigging() {
   const el = document.getElementById('coachTabContent');
-  const r = RIGGING_DATA[riggingClass];
+  const bc = BOAT_CLASSES.find(c=>c.id===riggingClass);
+  const saved = getRiggingSetting(riggingManufacturer, riggingClass);
+  const def = RIGGING_DEFAULTS[riggingClass];
+  const isGeneric = riggingManufacturer === 'Generic';
+  const vals = {
+    spread: saved?.spread ?? (isGeneric ? def.spread : ''),
+    oar_length: saved?.oar_length ?? (isGeneric ? def.oarLength : ''),
+    inboard: saved?.inboard ?? (isGeneric ? def.inboard : ''),
+    pitch: saved?.pitch ?? (isGeneric ? def.pitch : ''),
+    oarlock_height: saved?.oarlock_height ?? (isGeneric ? def.oarlockHeight : ''),
+    notes: saved?.notes ?? '',
+  };
+
   el.innerHTML = `
     <div style="padding:14px 16px 4px">
       <div class="section-label" style="padding:0">Rigging Calculator</div>
-      <div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;margin-top:4px;line-height:1.5">General junior/high-school sweep starting points — fine-tune per boat and athlete.</div>
+      <div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;margin-top:4px;line-height:1.5">Generic starting points are pre-filled; enter your actual Empacher/Hudson numbers to save them here.</div>
+    </div>
+    <div class="filter-strip" style="padding:0 16px 8px;border:none">
+      ${RIGGING_MANUFACTURERS.map(m=>`<div class="fpill${m===riggingManufacturer?' active':''}" onclick="setRiggingManufacturer('${m}')">${m}</div>`).join('')}
     </div>
     <div class="filter-strip" style="padding:0 16px 12px;border:none">
       ${BOAT_CLASSES.map(c=>`<div class="fpill${c.id===riggingClass?' active':''}" onclick="setRiggingClass('${c.id}')">${c.label}</div>`).join('')}
     </div>
     <div class="card" style="margin:0 16px 16px">
-      <div class="card-title" style="margin-bottom:10px">${r.label} Recommended Settings</div>
-      <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2.2">
-        <div class="flex-between"><span style="color:var(--text3)">Spread</span><span>${r.spread}</span></div>
-        <div class="flex-between"><span style="color:var(--text3)">Oar Length</span><span>${r.oarLength}</span></div>
-        <div class="flex-between"><span style="color:var(--text3)">Inboard</span><span>${r.inboard}</span></div>
-        <div class="flex-between"><span style="color:var(--text3)">Pitch</span><span>${r.pitch}</span></div>
-        <div class="flex-between"><span style="color:var(--text3)">Oarlock Height</span><span>${r.oarlockHeight}</span></div>
-      </div>
+      <div class="card-title" style="margin-bottom:10px">${riggingManufacturer} · ${bc.label} Settings</div>
+      <div class="form-group"><label class="pr-label">Spread</label><input class="form-input" id="rigSpread" value="${vals.spread}"></div>
+      <div class="form-group"><label class="pr-label">Oar Length</label><input class="form-input" id="rigOarLength" value="${vals.oar_length}"></div>
+      <div class="form-group"><label class="pr-label">Inboard</label><input class="form-input" id="rigInboard" value="${vals.inboard}"></div>
+      <div class="form-group"><label class="pr-label">Pitch</label><input class="form-input" id="rigPitch" value="${vals.pitch}"></div>
+      <div class="form-group"><label class="pr-label">Oarlock Height</label><input class="form-input" id="rigOarlockHeight" value="${vals.oarlock_height}"></div>
+      <div class="form-group"><label class="pr-label">Notes</label><textarea class="form-textarea" id="rigNotes" placeholder="Boat name, serial, or other notes">${vals.notes}</textarea></div>
+      <button class="submit-btn" onclick="saveRiggingSetting()">Save ${riggingManufacturer} ${bc.label} Settings</button>
+      <div id="rigMsg" style="margin-top:10px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
     </div>
     <div style="padding:0 16px 4px">
-      <div class="section-label" style="padding:0">Reference Chart — All Classes</div>
+      <div class="section-label" style="padding:0">${riggingManufacturer} — All Classes</div>
     </div>
     <div class="card" style="margin:0 16px 16px;overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-family:-apple-system,sans-serif;font-size:12px;color:var(--text2)">
@@ -2589,15 +2618,44 @@ function renderRigging() {
           <th style="text-align:left;padding:6px 8px 6px 0;color:var(--text3);font-weight:400">Setting</th>
           ${BOAT_CLASSES.map(c=>`<th style="text-align:left;padding:6px 8px;color:var(--text3);font-weight:400">${c.label}</th>`).join('')}
         </tr>
-        ${['spread','oarLength','inboard','pitch','oarlockHeight'].map(key=>{
-          const rowLabel = {spread:'Spread',oarLength:'Oar Length',inboard:'Inboard',pitch:'Pitch',oarlockHeight:'Oarlock Height'}[key];
+        ${[['spread','Spread'],['oar_length','Oar Length'],['inboard','Inboard'],['pitch','Pitch'],['oarlock_height','Oarlock Height']].map(([key,rowLabel])=>{
           return `<tr style="border-bottom:1px solid var(--border2)">
             <td style="padding:6px 8px 6px 0">${rowLabel}</td>
-            ${BOAT_CLASSES.map(c=>`<td style="padding:6px 8px">${RIGGING_DATA[c.id][key]}</td>`).join('')}
+            ${BOAT_CLASSES.map(c=>{
+              const s = getRiggingSetting(riggingManufacturer, c.id);
+              const dKey = {spread:'spread',oar_length:'oarLength',inboard:'inboard',pitch:'pitch',oarlock_height:'oarlockHeight'}[key];
+              const val = s ? s[key] : (isGeneric ? RIGGING_DEFAULTS[c.id][dKey] : '—');
+              return `<td style="padding:6px 8px">${val||'—'}</td>`;
+            }).join('')}
           </tr>`;
         }).join('')}
       </table>
     </div>`;
+}
+
+async function saveRiggingSetting() {
+  const spread = document.getElementById('rigSpread').value.trim();
+  const oar_length = document.getElementById('rigOarLength').value.trim();
+  const inboard = document.getElementById('rigInboard').value.trim();
+  const pitch = document.getElementById('rigPitch').value.trim();
+  const oarlock_height = document.getElementById('rigOarlockHeight').value.trim();
+  const notes = document.getElementById('rigNotes').value.trim();
+  const msgEl = document.getElementById('rigMsg');
+  const existing = getRiggingSetting(riggingManufacturer, riggingClass);
+  const fields = {manufacturer: riggingManufacturer, boat_class: riggingClass, spread, oar_length, inboard, pitch, oarlock_height, notes, updated_at: new Date().toISOString()};
+
+  if(existing) {
+    const ok = await supaPatch('hrc_rigging_settings', {id: existing.id}, fields);
+    if(ok) { Object.assign(existing, fields); msgEl.style.color='var(--green)'; msgEl.textContent='Saved.'; }
+    else { msgEl.style.color='#e05c5c'; msgEl.textContent='Save failed — try again.'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_rigging_settings', rec);
+    if(res) { RIGGING_SETTINGS.push(rec); msgEl.style.color='var(--green)'; msgEl.textContent='Saved.'; }
+    else { msgEl.style.color='#e05c5c'; msgEl.textContent='Save failed — try again.'; }
+  }
+  msgEl.style.display='block';
+  toast('Rigging settings saved');
 }
 
 function renderParentsList() {
