@@ -1057,6 +1057,9 @@ body {
         <button class="race-lineup-btn" onclick="stepLineupDate(1)">→</button>
       </div>
       <button class="race-lineup-btn" style="margin-top:8px;width:100%" onclick="goToLineupToday()">Today</button>
+      <div id="lineupSessionWrap" style="margin-top:10px">
+        <div class="filter-strip" style="padding:0;border:none" id="lineupSessionFilter"></div>
+      </div>
       <input class="form-input" id="lineupBoatLabel" type="text" placeholder="Boat label (optional, e.g. 1st Boat, Varsity)" style="margin-top:10px">
     </div>
     <div class="section">
@@ -1859,11 +1862,30 @@ function setRosterFilter(f) { rosterFilter=f; buildRoster(); }
 // ════════════════════════════════════════════
 let LINEUPS = [];
 
+let lineupSession = 'PM';
+
 function lineupRaceLabel() {
   const sel = document.getElementById('lineupRace');
   const date = document.getElementById('lineupDate')?.value || new Date().toISOString().split('T')[0];
   if(!sel) return '';
-  return sel.value === 'practice' ? 'Practice — ' + date : sel.value;
+  return sel.value === 'practice' ? 'Practice — ' + date + ' ' + lineupSession : sel.value;
+}
+
+function setLineupSession(s) {
+  lineupSession = s;
+  editingLineupId = null;
+  buildLineupBoard();
+}
+
+function renderLineupSessionPills() {
+  const sel = document.getElementById('lineupRace');
+  const wrap = document.getElementById('lineupSessionWrap');
+  if(!sel || !wrap) return;
+  if(sel.value !== 'practice') { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  document.getElementById('lineupSessionFilter').innerHTML = ['AM','PM'].map(s=>
+    `<div class="fpill${s===lineupSession?' active':''}" onclick="setLineupSession('${s}')">${s} Practice</div>`
+  ).join('');
 }
 
 function stepLineupDate(dir) {
@@ -1886,6 +1908,7 @@ function onLineupRaceChange() {
   const sel = document.getElementById('lineupRace');
   const dateEl = document.getElementById('lineupDate');
   if(dateEl) dateEl.style.display = 'block';
+  renderLineupSessionPills();
   buildLineupBoard();
 }
 
