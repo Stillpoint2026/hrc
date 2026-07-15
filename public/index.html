@@ -3346,7 +3346,7 @@ function renderShifts() {
   if(!shiftWeekStart) shiftWeekStart = weekStart(new Date());
   const days = [];
   for(let i=0;i<7;i++){ const d=new Date(shiftWeekStart); d.setDate(d.getDate()+i); days.push(d); }
-  const fmt = d => d.toISOString().split('T')[0];
+  const fmt = d => fmtDate(d);
   const isHead = CU.role==='head-coach' || CU.role==='admin';
   const myName = (ATHLETES.find(a=>a.id===CU.member_id)?.name)||CU.name;
 
@@ -3540,7 +3540,12 @@ async function openAddResource() {
 }
 
 // ── LEARN TO ROW ──
-function fmtDate(d) { return d.toISOString().split('T')[0]; }
+function fmtDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 
 function getCurrentCampWeek() {
   const todayStr = fmtDate(new Date());
