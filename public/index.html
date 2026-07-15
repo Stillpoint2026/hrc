@@ -827,6 +827,7 @@ body {
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
     <div class="nt" data-s="parent" onclick="go('parent')">Parents</div>
     <div class="nt coach-only" data-s="ltr" onclick="go('ltr')">Learn to Row</div>
+    <div class="nt boathouse-only" data-s="boathouse" onclick="go('boathouse')">The Boathouse</div>
     <div class="nt" data-s="rankings" onclick="go('rankings')">Leaderboard</div>
     <div class="nt" data-s="documents" onclick="go('documents')">Documents</div>
     <div class="nt" data-s="absence" onclick="go('absence')">Absence</div>
@@ -965,6 +966,10 @@ body {
       <div class="ql coach-only" onclick="go('ltr')">
         <div class="ql-label">Summer Camps</div>
         <div class="ql-title">Learn to Row</div>
+      </div>
+      <div class="ql boathouse-only" onclick="go('boathouse')">
+        <div class="ql-label">Gear & Supplies</div>
+        <div class="ql-title">The Boathouse</div>
       </div>
     </div>
     <div class="section" id="homeAnnouncements"></div>
@@ -1174,6 +1179,20 @@ body {
     <div id="rankingsContent"></div>
   </div>
 
+  <!-- THE BOATHOUSE -->
+  <div class="scr" id="scr-boathouse">
+    <div class="scr-hd">
+      <div class="scr-title">The Boathouse</div>
+      <div class="scr-sub">Maintenance, repairs, and supplies</div>
+    </div>
+    <div class="tab-row">
+      <div class="tab active" data-btab="parts" onclick="switchBoathouseTab('parts')">Parts &amp; Equipment</div>
+      <div class="tab" data-btab="repairs" onclick="switchBoathouseTab('repairs')">Repairs</div>
+      <div class="tab" data-btab="concessions" onclick="switchBoathouseTab('concessions')">Concessions</div>
+    </div>
+    <div id="boathouseTabContent"></div>
+  </div>
+
   <!-- DOCUMENTS -->
   <div class="scr" id="scr-documents">
     <div class="scr-hd flex-between">
@@ -1332,6 +1351,11 @@ let RESOURCES = [];
 let DOCUMENTS = [];
 let LTR_CAMPERS = [];
 let LTR_ATTENDANCE = [];
+let BOATHOUSE_ITEMS = [];
+let REPAIRS = [];
+let boathouseTab = 'parts';
+let boathouseItemEditId = null;
+let repairEditId = null;
 let ltrTab = 'roster';
 let ltrCamperEditId = null;
 let ltrRosterFilter = 'all';
@@ -1550,8 +1574,14 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs()]);
   await linkMemberRecord();
+  const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
+  const me = ATHLETES.find(a=>a.id===CU.member_id);
+  const isCox = me?.side === 'cox';
+  document.querySelectorAll('.boathouse-only').forEach(el=>{
+    el.style.display = (isCoachRole || isCox) ? '' : 'none';
+  });
   buildHome();
   buildSchedule();
   buildRoster();
@@ -1563,6 +1593,7 @@ async function initApp() {
   buildDocuments();
   buildRankings();
   buildLtr();
+  buildBoathouse();
   populateAbsenceDropdown();
   renderAbsenceList();
   fetchWeather();
@@ -1614,6 +1645,16 @@ async function loadLtrCampers() {
 async function loadLtrAttendance() {
   const rows = await supaGet('ltr_attendance', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '2000'});
   LTR_ATTENDANCE = rows || [];
+}
+
+async function loadBoathouseItems() {
+  const rows = await supaGet('hrc_boathouse_items', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '300'});
+  BOATHOUSE_ITEMS = rows || [];
+}
+
+async function loadRepairs() {
+  const rows = await supaGet('hrc_repairs', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '300'});
+  REPAIRS = rows || [];
 }
 
 async function loadShifts() {
@@ -1720,6 +1761,15 @@ function go(screen) {
   if(CU && CU.role==='parent' && ['roster','lineup','athlete'].includes(screen)) {
     toast("This section isn't available for parent accounts");
     screen = 'home';
+  }
+  if(CU && screen==='boathouse') {
+    const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
+    const me = ATHLETES.find(a=>a.id===CU.member_id);
+    const isCox = me?.side === 'cox';
+    if(!isCoachRole && !isCox) {
+      toast("The Boathouse is only available to coaches and coxswains");
+      screen = 'home';
+    }
   }
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nt').forEach(t=>t.classList.toggle('active',t.dataset.s===screen));
@@ -3684,6 +3734,207 @@ function getCurrentCampWeek() {
     if(diff >= 0 && diff < minDiff) { minDiff = diff; closest = num; }
   }
   return closest !== null ? closest : 3;
+}
+
+// ── THE BOATHOUSE ──
+const BOATHOUSE_ITEM_STATUSES = [
+  {id:'in-stock', label:'In Stock', color:'#5a9a6a'},
+  {id:'low', label:'Running Low', color:'#c0964a'},
+  {id:'need-to-order', label:'Need to Order', color:'#e05c5c'},
+  {id:'ordered', label:'Ordered', color:'#4a7ac0'},
+];
+const REPAIR_STATUSES = [
+  {id:'reported', label:'Reported', color:'#e05c5c'},
+  {id:'in-progress', label:'In Progress', color:'#c0964a'},
+  {id:'fixed', label:'Fixed', color:'#5a9a6a'},
+];
+
+function buildBoathouse() {
+  switchBoathouseTab(boathouseTab);
+}
+
+function switchBoathouseTab(tab) {
+  boathouseTab = tab;
+  document.querySelectorAll('#scr-boathouse .tab').forEach(t=>t.classList.toggle('active', t.dataset.btab===tab));
+  if(tab==='parts') renderBoathouseItems('part');
+  else if(tab==='concessions') renderBoathouseItems('concession');
+  else if(tab==='repairs') renderRepairs();
+}
+
+function renderBoathouseItems(category) {
+  const el = document.getElementById('boathouseTabContent');
+  const items = BOATHOUSE_ITEMS.filter(i=>i.category===category).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const label = category==='part' ? 'Part / Equipment' : 'Item';
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">${category==='part'?'Parts & Equipment':'Concessions'}</div>
+    <button class="race-lineup-btn" onclick="openBoathouseItemForm(null,'${category}')">+ Add ${label}</button>
+  </div>`;
+  if(!items.length) {
+    html += `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">Nothing here yet.</div>`;
+  } else {
+    html += items.map(i=>{
+      const st = BOATHOUSE_ITEM_STATUSES.find(s=>s.id===i.status) || BOATHOUSE_ITEM_STATUSES[0];
+      return `<div class="card" style="cursor:pointer" onclick="openBoathouseItemForm('${i.id}','${category}')">
+        <div class="flex-between">
+          <div>
+            <div class="card-title">${i.name}</div>
+            <div class="card-sub">Qty: ${i.quantity ?? '—'}</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
+        </div>
+        ${i.notes?`<div style="margin-top:6px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2)">${i.notes}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+function openBoathouseItemForm(id, category) {
+  boathouseItemEditId = id || null;
+  const i = id ? BOATHOUSE_ITEMS.find(x=>x.id===id) : null;
+  const el = document.getElementById('boathouseTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group">
+      <label class="pr-label">Name</label>
+      <input class="form-input" id="bhItemName" placeholder="${category==='part'?'e.g. Spare foot stretcher':'e.g. Granola bars'}" value="${i?.name||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Quantity</label>
+      <input class="form-input" id="bhItemQty" type="number" value="${i?.quantity ?? ''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Status</label>
+      <select class="form-select" id="bhItemStatus">
+        ${BOATHOUSE_ITEM_STATUSES.map(s=>`<option value="${s.id}" ${(i?.status||'in-stock')===s.id?'selected':''}>${s.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Notes</label>
+      <textarea class="form-textarea" id="bhItemNotes" placeholder="Supplier, size, brand, etc.">${i?.notes||''}</textarea>
+    </div>
+    <button class="submit-btn" onclick="saveBoathouseItem('${category}')">${i?'Save Changes':'Add'}</button>
+    ${i?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteBoathouseItem('${i.id}','${category}')">Delete</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('${category==='part'?'parts':'concessions'}')">Cancel</button>
+    <div id="bhItemMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveBoathouseItem(category) {
+  const name = document.getElementById('bhItemName').value.trim();
+  const quantity = document.getElementById('bhItemQty').value.trim();
+  const status = document.getElementById('bhItemStatus').value;
+  const notes = document.getElementById('bhItemNotes').value.trim();
+  const msgEl = document.getElementById('bhItemMsg');
+  if(!name) { msgEl.textContent='Name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const fields = {name, quantity: quantity===''?null:parseInt(quantity), status, notes, category, updated_by_name: CU.name, updated_at: new Date().toISOString()};
+
+  if(boathouseItemEditId) {
+    const ok = await supaPatch('hrc_boathouse_items', {id: boathouseItemEditId}, fields);
+    if(ok) {
+      const i = BOATHOUSE_ITEMS.find(x=>x.id===boathouseItemEditId);
+      if(i) Object.assign(i, fields);
+      toast('Updated'); switchBoathouseTab(category==='part'?'parts':'concessions');
+    } else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_boathouse_items', rec);
+    if(res) { BOATHOUSE_ITEMS.push(rec); toast('Added'); switchBoathouseTab(category==='part'?'parts':'concessions'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteBoathouseItem(id, category) {
+  if(!confirm('Remove this item?')) return;
+  const ok = await supaDelete('hrc_boathouse_items', {id});
+  if(ok) { BOATHOUSE_ITEMS = BOATHOUSE_ITEMS.filter(i=>i.id!==id); toast('Removed'); }
+  switchBoathouseTab(category==='part'?'parts':'concessions');
+}
+
+function renderRepairs() {
+  const el = document.getElementById('boathouseTabContent');
+  const sorted = REPAIRS.slice().sort((a,b)=>{
+    const order = {reported:0,'in-progress':1,fixed:2};
+    return (order[a.status]??0) - (order[b.status]??0);
+  });
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Repairs</div>
+    <button class="race-lineup-btn" onclick="openRepairForm()">+ Report Repair</button>
+  </div>`;
+  if(!sorted.length) {
+    html += '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No repairs reported.</div>';
+  } else {
+    html += sorted.map(r=>{
+      const st = REPAIR_STATUSES.find(s=>s.id===r.status) || REPAIR_STATUSES[0];
+      const dt = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      return `<div class="card" style="cursor:pointer" onclick="openRepairForm('${r.id}')">
+        <div class="flex-between">
+          <div>
+            <div class="card-title">${r.item_name}</div>
+            <div class="card-sub">Reported ${dt}${r.reported_by_name?' by '+r.reported_by_name:''}</div>
+          </div>
+          <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
+        </div>
+        ${r.description?`<div style="margin-top:6px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2)">${r.description}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
+}
+
+function openRepairForm(id) {
+  repairEditId = id || null;
+  const r = id ? REPAIRS.find(x=>x.id===id) : null;
+  const el = document.getElementById('boathouseTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group">
+      <label class="pr-label">Item</label>
+      <input class="form-input" id="repItemName" placeholder="e.g. Vespoli 8+ #2, Port Oar #4" value="${r?.item_name||''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">What's wrong</label>
+      <textarea class="form-textarea" id="repDescription" placeholder="Describe the issue">${r?.description||''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Status</label>
+      <select class="form-select" id="repStatus">
+        ${REPAIR_STATUSES.map(s=>`<option value="${s.id}" ${(r?.status||'reported')===s.id?'selected':''}>${s.label}</option>`).join('')}
+      </select>
+    </div>
+    <button class="submit-btn" onclick="saveRepair()">${r?'Save Changes':'Report Repair'}</button>
+    ${r?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteRepair('${r.id}')">Delete</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('repairs')">Cancel</button>
+    <div id="repMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveRepair() {
+  const item_name = document.getElementById('repItemName').value.trim();
+  const description = document.getElementById('repDescription').value.trim();
+  const status = document.getElementById('repStatus').value;
+  const msgEl = document.getElementById('repMsg');
+  if(!item_name) { msgEl.textContent='Item name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+
+  if(repairEditId) {
+    const fields = {item_name, description, status};
+    const ok = await supaPatch('hrc_repairs', {id: repairEditId}, fields);
+    if(ok) {
+      const r = REPAIRS.find(x=>x.id===repairEditId);
+      if(r) Object.assign(r, fields);
+      toast('Updated'); switchBoathouseTab('repairs');
+    } else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, item_name, description, status, reported_by_name: CU.name, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_repairs', rec);
+    if(res) { REPAIRS.unshift(rec); toast('Repair reported'); switchBoathouseTab('repairs'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteRepair(id) {
+  if(!confirm('Delete this repair record?')) return;
+  const ok = await supaDelete('hrc_repairs', {id});
+  if(ok) { REPAIRS = REPAIRS.filter(r=>r.id!==id); toast('Deleted'); }
+  switchBoathouseTab('repairs');
 }
 
 function buildLtr() {
