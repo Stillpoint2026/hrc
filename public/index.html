@@ -1407,8 +1407,19 @@ async function doSignIn() {
       const msg = data.error_description||data.msg||'Sign in failed.';
       const isUnconfirmed = /confirm/i.test(msg) || data.error_code==='email_not_confirmed';
       if(isUnconfirmed) {
-        errEl.innerHTML = msg+' <span style="text-decoration:underline;cursor:pointer" onclick="resendConfirmation(\''+email.replace(/'/g,"\\'")+'\')">Resend confirmation email</span>';
+        errEl.style.color = 'var(--green)';
+        errEl.style.background = 'rgba(90,154,106,0.12)';
+        errEl.style.border = '1px solid var(--green)';
+        errEl.style.borderRadius = '8px';
+        errEl.style.padding = '10px 12px';
+        errEl.style.lineHeight = '1.5';
+        errEl.innerHTML = "You're almost there — your account was created, it just needs email confirmation. Check your email (and spam folder) for the confirmation link, then come back to <strong>hawkrowingclub.org</strong> and sign in here. No need to sign up again. <span style=\"text-decoration:underline;cursor:pointer\" onclick=\"resendConfirmation('"+email.replace(/'/g,"\\'")+"')\">Resend confirmation email</span>";
       } else {
+        errEl.style.color = '';
+        errEl.style.background = '';
+        errEl.style.border = '';
+        errEl.style.borderRadius = '';
+        errEl.style.padding = '';
         errEl.textContent = msg;
       }
       errEl.style.display='block';
@@ -1470,8 +1481,13 @@ async function doSignUp() {
     const data = await res.json();
     if(!res.ok||data.error){errEl.textContent=data.error_description||'Signup failed.';errEl.style.display='block';return;}
     if(data.user&&!data.session){
-      errEl.style.color='#4a9a6a';
-      errEl.innerHTML = 'Check your email to confirm your account, then sign in. <span style="text-decoration:underline;cursor:pointer" onclick="resendConfirmation(\''+email.replace(/'/g,"\\'")+'\')">Resend email</span>';
+      errEl.style.color='var(--green)';
+      errEl.style.background = 'rgba(90,154,106,0.12)';
+      errEl.style.border = '1px solid var(--green)';
+      errEl.style.borderRadius = '8px';
+      errEl.style.padding = '10px 12px';
+      errEl.style.lineHeight = '1.5';
+      errEl.innerHTML = 'Account created! Check your email (and spam folder) for a confirmation link, then come back to <strong>hawkrowingclub.org</strong> and sign in here — no need to sign up again. <span style="text-decoration:underline;cursor:pointer" onclick="resendConfirmation(\''+email.replace(/'/g,"\\'")+'\')">Resend email</span>';
       errEl.style.display='block';
     }
   } catch(e){errEl.textContent='Connection error.';errEl.style.display='block';}
