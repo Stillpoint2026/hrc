@@ -1105,6 +1105,7 @@ body {
       <div class="tab" onclick="switchCoachTab('parents')">Parents</div>
       <div class="tab" onclick="switchCoachTab('rigging')">Rigging</div>
       <div class="tab" onclick="switchCoachTab('compliance')">Compliance</div>
+      <div class="tab" onclick="switchCoachTab('recruiting')">Recruiting</div>
       <div class="tab" onclick="switchCoachTab('profile')">My Profile</div>
     </div>
     <div id="coachTabContent"></div>
@@ -1124,6 +1125,7 @@ body {
       <div class="tab" onclick="switchAthleteTab('lifting')">Lifting</div>
       <div class="tab" onclick="switchAthleteTab('core')">Core</div>
       <div class="tab" onclick="switchAthleteTab('resources')">Resources</div>
+      <div class="tab" onclick="switchAthleteTab('recruiting')">Recruiting</div>
       <div class="tab" onclick="go('messages')">Messages</div>
     </div>
     <div id="athleteTabContent"></div>
@@ -1355,6 +1357,7 @@ let LTR_CAMPERS = [];
 let LTR_ATTENDANCE = [];
 let BOATHOUSE_ITEMS = [];
 let REPAIRS = [];
+let RECRUITING_PROFILES = [];
 let boathouseTab = 'parts';
 let boathouseItemEditId = null;
 let repairEditId = null;
@@ -1576,7 +1579,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs(), loadRecruitingProfiles()]);
   await linkMemberRecord();
   const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
   const me = ATHLETES.find(a=>a.id===CU.member_id);
@@ -1657,6 +1660,11 @@ async function loadBoathouseItems() {
 async function loadRepairs() {
   const rows = await supaGet('hrc_repairs', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'created_at.desc', 'limit': '300'});
   REPAIRS = rows || [];
+}
+
+async function loadRecruitingProfiles() {
+  const rows = await supaGet('hrc_recruiting_profiles', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '300'});
+  RECRUITING_PROFILES = rows || [];
 }
 
 async function loadShifts() {
@@ -2518,6 +2526,10 @@ function switchCoachTab(tab) {
     renderCompliance();
     return;
 
+  } else if(tab==='recruiting') {
+    renderRecruitingList();
+    return;
+
   } else if(tab==='profile') {
     const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
     el.innerHTML = `<div class="absence-form">
@@ -2751,6 +2763,9 @@ if(tab==='noticeboard') {
         </table>
       </div>`;
 
+  } else if(tab==='recruiting') {
+    renderRecruitingProfile();
+
   } else if(tab==='resources') {
     const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
     el.innerHTML = `
@@ -2772,7 +2787,121 @@ if(tab==='noticeboard') {
   }
 }
 
-// ── BOAT INVENTORY ──
+// ── RECRUITING PROFILE ──
+function getRecruitingProfile(athleteId) {
+  return RECRUITING_PROFILES.find(p=>p.athlete_id===athleteId);
+}
+
+function renderRecruitingProfile() {
+  const el = document.getElementById('athleteTabContent');
+  const athleteId = CU.member_id;
+  const p = getRecruitingProfile(athleteId) || {};
+  const me = ATHLETES.find(a=>a.id===athleteId) || {};
+
+  const best2k = ERG_SCORES.filter(e=>e.athlete_id===athleteId && is2kTest(e.test)).sort((a,b)=>a.time_seconds-b.time_seconds)[0];
+  const best6k = ERG_SCORES.filter(e=>e.athlete_id===athleteId && e.test==='6k').sort((a,b)=>a.time_seconds-b.time_seconds)[0];
+  const attendance = attendancePercentForAthlete(athleteId);
+  const sideLabel = sideMeta(me.side)?.label || '—';
+
+  el.innerHTML = `<div class="absence-form">
+    <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">Build your recruiting profile for college coaches. Toggle each section on to share it with HRC coaches — off means it stays private, just for you.</div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="flex-between" style="margin-bottom:10px">
+        <div class="card-title">Personal</div>
+        <label style="display:flex;align-items:center;gap:6px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">
+          <input type="checkbox" id="recSharePersonal" ${p.share_personal?'checked':''}> Share
+        </label>
+      </div>
+      <div class="form-group"><label class="pr-label">Height</label><input class="form-input" id="recHeight" placeholder="e.g. 6'2&quot;" value="${p.height||''}"></div>
+      <div class="form-group"><label class="pr-label">Weight</label><input class="form-input" id="recWeight" placeholder="e.g. 175 lbs" value="${p.weight||''}"></div>
+      <div class="form-group"><label class="pr-label">Hometown</label><input class="form-input" id="recHometown" value="${p.hometown||''}"></div>
+      <div class="form-group"><label class="pr-label">Grad Year</label><input class="form-input" id="recGradYear" value="${p.grad_year||''}"></div>
+      <div class="form-group"><label class="pr-label">Personal Statement</label><textarea class="form-textarea" id="recBio" placeholder="A few sentences about you">${p.bio||''}</textarea></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="flex-between" style="margin-bottom:10px">
+        <div class="card-title">Academic</div>
+        <label style="display:flex;align-items:center;gap:6px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">
+          <input type="checkbox" id="recShareAcademic" ${p.share_academic?'checked':''}> Share
+        </label>
+      </div>
+      <div class="form-group"><label class="pr-label">School</label><input class="form-input" id="recSchool" value="${p.school||''}"></div>
+      <div class="form-group"><label class="pr-label">GPA</label><input class="form-input" id="recGpa" placeholder="e.g. 3.8 (unweighted)" value="${p.gpa||''}"></div>
+      <div class="form-group"><label class="pr-label">Academic Interests / Intended Major</label><input class="form-input" id="recAcademicInterests" value="${p.academic_interests||''}"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="flex-between" style="margin-bottom:10px">
+        <div class="card-title">Rowing Stats</div>
+        <label style="display:flex;align-items:center;gap:6px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">
+          <input type="checkbox" id="recShareRowing" ${p.share_rowing?'checked':''}> Share
+        </label>
+      </div>
+      <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2.2;margin-bottom:10px">
+        <div class="flex-between"><span style="color:var(--text3)">Best 2K</span><span>${best2k?fmtTime(best2k.time_seconds):'—'}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Best 6K</span><span>${best6k?fmtTime(best6k.time_seconds):'—'}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Attendance</span><span>${attendance===null?'—':attendance+'%'}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Side</span><span>${sideLabel}</span></div>
+      </div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-bottom:10px">Erg times, attendance, and side are pulled automatically from your HRC record.</div>
+      <div class="form-group"><label class="pr-label">Years of Rowing Experience</label><input class="form-input" id="recExperience" value="${p.rowing_experience||''}"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="flex-between" style="margin-bottom:10px">
+        <div class="card-title">Contact Info</div>
+        <label style="display:flex;align-items:center;gap:6px;font-family:-apple-system,sans-serif;font-size:11px;color:var(--text3)">
+          <input type="checkbox" id="recShareContact" ${p.share_contact?'checked':''}> Share
+        </label>
+      </div>
+      <div class="form-group"><label class="pr-label">Contact Email</label><input class="form-input" id="recContactEmail" type="email" value="${p.contact_email||''}"></div>
+      <div class="form-group"><label class="pr-label">Contact Phone</label><input class="form-input" id="recContactPhone" type="tel" value="${p.contact_phone||''}"></div>
+    </div>
+
+    <button class="submit-btn" onclick="saveRecruitingProfile()">Save Profile</button>
+    <div id="recMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveRecruitingProfile() {
+  const athleteId = CU.member_id;
+  const msgEl = document.getElementById('recMsg');
+  if(!athleteId) { msgEl.textContent='No member record found — sign out and back in.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+
+  const fields = {
+    height: document.getElementById('recHeight').value.trim(),
+    weight: document.getElementById('recWeight').value.trim(),
+    hometown: document.getElementById('recHometown').value.trim(),
+    grad_year: document.getElementById('recGradYear').value.trim(),
+    bio: document.getElementById('recBio').value.trim(),
+    school: document.getElementById('recSchool').value.trim(),
+    gpa: document.getElementById('recGpa').value.trim(),
+    academic_interests: document.getElementById('recAcademicInterests').value.trim(),
+    rowing_experience: document.getElementById('recExperience').value.trim(),
+    contact_email: document.getElementById('recContactEmail').value.trim(),
+    contact_phone: document.getElementById('recContactPhone').value.trim(),
+    share_personal: document.getElementById('recSharePersonal').checked,
+    share_academic: document.getElementById('recShareAcademic').checked,
+    share_rowing: document.getElementById('recShareRowing').checked,
+    share_contact: document.getElementById('recShareContact').checked,
+    updated_at: new Date().toISOString()
+  };
+
+  const existing = getRecruitingProfile(athleteId);
+  if(existing) {
+    const ok = await supaPatch('hrc_recruiting_profiles', {id: existing.id}, fields);
+    if(ok) { Object.assign(existing, fields); msgEl.style.color='var(--green)'; msgEl.textContent='Profile saved.'; toast('Profile saved'); }
+    else { msgEl.style.color='#e05c5c'; msgEl.textContent='Save failed — try again.'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, athlete_id: athleteId, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_recruiting_profiles', rec);
+    if(res) { RECRUITING_PROFILES.push(rec); msgEl.style.color='var(--green)'; msgEl.textContent='Profile saved.'; toast('Profile saved'); }
+    else { msgEl.style.color='#e05c5c'; msgEl.textContent='Save failed — try again.'; }
+  }
+  msgEl.style.display='block';
+}
 // ── RIGGING GUIDE (editable, per manufacturer) ──
 const RIGGING_MANUFACTURERS = ['Generic','Empacher','Hudson'];
 const RIGGING_DEFAULTS = {
@@ -2791,6 +2920,82 @@ function getRiggingSetting(manufacturer, boatClass) {
 }
 
 // ── COMPLIANCE (Dues / Waivers) ──
+function renderRecruitingList() {
+  const el = document.getElementById('coachTabContent');
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  el.innerHTML = `<div style="padding:14px 16px 4px"><div class="section-label" style="padding:0">Recruiting Profiles</div></div>` +
+    athletes.map(a=>{
+      const p = getRecruitingProfile(a.id);
+      const sharedCount = p ? [p.share_personal,p.share_academic,p.share_rowing,p.share_contact].filter(Boolean).length : 0;
+      return `<div class="card" style="cursor:pointer" onclick="viewRecruitingProfile('${a.id}')">
+        <div class="flex-between">
+          <div>
+            <div class="card-title">${a.name}${a.group?` <span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>`:''}</div>
+            <div class="card-sub">${sharedCount?sharedCount+' section'+(sharedCount>1?'s':'')+' shared':'Nothing shared yet'}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function viewRecruitingProfile(athleteId) {
+  const el = document.getElementById('coachTabContent');
+  const a = ATHLETES.find(x=>x.id===athleteId) || {};
+  const p = getRecruitingProfile(athleteId) || {};
+  const best2k = ERG_SCORES.filter(e=>e.athlete_id===athleteId && is2kTest(e.test)).sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+  const best6k = ERG_SCORES.filter(e=>e.athlete_id===athleteId && e.test==='6k').sort((x,y)=>x.time_seconds-y.time_seconds)[0];
+  const attendance = attendancePercentForAthlete(athleteId);
+  const sideLabel = sideMeta(a.side)?.label || '—';
+
+  const notShared = `<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px">Not shared by athlete.</div>`;
+
+  el.innerHTML = `<div style="padding:14px 16px">
+    <button class="race-lineup-btn" onclick="switchCoachTab('recruiting')">← All Profiles</button>
+  </div>
+  <div style="padding:0 16px">
+    <div class="card-title" style="font-size:18px;margin-bottom:12px">${a.name}</div>
+
+    <div class="section-label">Personal</div>
+    <div class="card" style="margin:8px 0 16px">
+      ${p.share_personal ? `<div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2">
+        ${p.height?`<div><span style="color:var(--text3)">Height:</span> ${p.height}</div>`:''}
+        ${p.weight?`<div><span style="color:var(--text3)">Weight:</span> ${p.weight}</div>`:''}
+        ${p.hometown?`<div><span style="color:var(--text3)">Hometown:</span> ${p.hometown}</div>`:''}
+        ${p.grad_year?`<div><span style="color:var(--text3)">Grad Year:</span> ${p.grad_year}</div>`:''}
+        ${p.bio?`<div style="margin-top:6px;font-weight:200">${p.bio}</div>`:''}
+      </div>` : notShared}
+    </div>
+
+    <div class="section-label">Academic</div>
+    <div class="card" style="margin:8px 0 16px">
+      ${p.share_academic ? `<div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2">
+        ${p.school?`<div><span style="color:var(--text3)">School:</span> ${p.school}</div>`:''}
+        ${p.gpa?`<div><span style="color:var(--text3)">GPA:</span> ${p.gpa}</div>`:''}
+        ${p.academic_interests?`<div><span style="color:var(--text3)">Interests:</span> ${p.academic_interests}</div>`:''}
+      </div>` : notShared}
+    </div>
+
+    <div class="section-label">Rowing Stats</div>
+    <div class="card" style="margin:8px 0 16px">
+      ${p.share_rowing ? `<div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2">
+        <div class="flex-between"><span style="color:var(--text3)">Best 2K</span><span>${best2k?fmtTime(best2k.time_seconds):'—'}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Best 6K</span><span>${best6k?fmtTime(best6k.time_seconds):'—'}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Attendance</span><span>${attendance===null?'—':attendance+'%'}</span></div>
+        <div class="flex-between"><span style="color:var(--text3)">Side</span><span>${sideLabel}</span></div>
+        ${p.rowing_experience?`<div class="flex-between"><span style="color:var(--text3)">Experience</span><span>${p.rowing_experience}</span></div>`:''}
+      </div>` : notShared}
+    </div>
+
+    <div class="section-label">Contact Info</div>
+    <div class="card" style="margin:8px 0 16px">
+      ${p.share_contact ? `<div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2);line-height:2">
+        ${p.contact_email?`<div><span style="color:var(--text3)">Email:</span> <a href="mailto:${p.contact_email}" style="color:var(--crimson)">${p.contact_email}</a></div>`:''}
+        ${p.contact_phone?`<div><span style="color:var(--text3)">Phone:</span> <a href="tel:${p.contact_phone}" style="color:var(--crimson)">${p.contact_phone}</a></div>`:''}
+      </div>` : notShared}
+    </div>
+  </div>`;
+}
+
 function renderCompliance() {
   const el = document.getElementById('coachTabContent');
   const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
