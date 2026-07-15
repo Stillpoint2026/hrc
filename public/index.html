@@ -4564,6 +4564,7 @@ function openAthleteDetail(id) {
         ${a.grade?`<div><span style="color:var(--text3)">Grade:</span> ${a.grade}${a.dob?' · DOB '+a.dob:''}</div>`:''}
         ${a.experience?`<div><span style="color:var(--text3)">Experience:</span> ${a.experience}</div>`:''}
         ${a.shirt_size?`<div><span style="color:var(--text3)">Shirt:</span> ${a.shirt_size}</div>`:''}
+        ${a.uniform_size?`<div><span style="color:var(--text3)">Uniform:</span> ${a.uniform_size}</div>`:''}
         ${a.parent_name?`<div style="margin-top:6px"><span style="color:var(--text3)">Parent:</span> ${a.parent_name} (${a.parent_relation||''})</div>`:''}
         ${a.parent_email?`<div><span style="color:var(--text3)">Email:</span> <a href="mailto:${a.parent_email}" style="color:var(--crimson)">${a.parent_email}</a></div>`:''}
         ${a.parent_phone?`<div><span style="color:var(--text3)">Phone:</span> <a href="tel:${a.parent_phone}" style="color:var(--crimson)">${a.parent_phone}</a></div>`:''}
