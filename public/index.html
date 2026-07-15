@@ -2955,7 +2955,7 @@ function openBoatForm(id) {
     </div>
     <div class="form-group">
       <label class="pr-label">Manufacturer / Model</label>
-      <input class="form-input" id="boatMfr" placeholder="e.g. Vespoli, Filippi" value="${b?.manufacturer||''}">
+      <input class="form-input" id="boatMfr" list="mfrOptions" placeholder="e.g. Empacher, Hudson, or type your own" value="${b?.manufacturer||''}">
     </div>
     <div class="form-group">
       <label class="pr-label">Rigging Notes</label>
@@ -3779,7 +3779,7 @@ function renderBoathouseItems(category) {
         <div class="flex-between">
           <div>
             <div class="card-title">${i.name}</div>
-            <div class="card-sub">Qty: ${i.quantity ?? '—'}</div>
+            <div class="card-sub">Qty: ${i.quantity ?? '—'}${i.manufacturer?' · '+i.manufacturer:''}</div>
           </div>
           <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
         </div>
@@ -3803,6 +3803,10 @@ function openBoathouseItemForm(id, category) {
       <label class="pr-label">Quantity</label>
       <input class="form-input" id="bhItemQty" type="number" value="${i?.quantity ?? ''}">
     </div>
+    ${category==='part'?`<div class="form-group">
+      <label class="pr-label">Manufacturer</label>
+      <input class="form-input" id="bhItemMfr" list="mfrOptions" placeholder="e.g. Empacher, Hudson, NK, Peach" value="${i?.manufacturer||''}">
+    </div>`:''}
     <div class="form-group">
       <label class="pr-label">Status</label>
       <select class="form-select" id="bhItemStatus">
@@ -3823,11 +3827,12 @@ function openBoathouseItemForm(id, category) {
 async function saveBoathouseItem(category) {
   const name = document.getElementById('bhItemName').value.trim();
   const quantity = document.getElementById('bhItemQty').value.trim();
+  const manufacturer = document.getElementById('bhItemMfr')?.value.trim() || null;
   const status = document.getElementById('bhItemStatus').value;
   const notes = document.getElementById('bhItemNotes').value.trim();
   const msgEl = document.getElementById('bhItemMsg');
   if(!name) { msgEl.textContent='Name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
-  const fields = {name, quantity: quantity===''?null:parseInt(quantity), status, notes, category, updated_by_name: CU.name, updated_at: new Date().toISOString()};
+  const fields = {name, quantity: quantity===''?null:parseInt(quantity), manufacturer, status, notes, category, updated_by_name: CU.name, updated_at: new Date().toISOString()};
 
   if(boathouseItemEditId) {
     const ok = await supaPatch('hrc_boathouse_items', {id: boathouseItemEditId}, fields);
@@ -4704,5 +4709,11 @@ function openAddAthlete() {
   supaInsert('hrc_members', record).then(()=>{ ATHLETES.push(record); ATHLETES.sort((a,b)=>a.name.localeCompare(b.name)); buildRoster(); buildHome(); toast(name+' added'); });
 }
 </script>
+<datalist id="mfrOptions">
+  <option value="Empacher">
+  <option value="Hudson">
+  <option value="NK">
+  <option value="Peach">
+</datalist>
 </body>
 </html>
