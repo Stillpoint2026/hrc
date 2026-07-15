@@ -2476,15 +2476,23 @@ function switchAthleteTab(tab) {
   document.querySelectorAll('#scr-athlete .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().replace(' ','')===tab));
   const el = document.getElementById('athleteTabContent');
 
-  if(tab==='noticeboard') {
+  function renderNoticeCard(a, isCoach) {
+  const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  return `<div class="announcement-card">
+    <div class="flex-between">
+      <div class="ann-date">${a.title||'Notice'} · ${dt}${a.posted_by_name?' · '+a.posted_by_name:''}</div>
+      ${isCoach?`<div style="display:flex;gap:8px;flex-shrink:0">
+        <span style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;cursor:pointer" onclick="editAnnouncement('${a.id}')">Edit</span>
+        <span style="font-family:-apple-system,sans-serif;font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;cursor:pointer" onclick="deleteAnnouncement('${a.id}')">Delete</span>
+      </div>`:''}
+    </div>
+    <div class="ann-body">${a.body||''}</div>
+  </div>`;
+}
+
+if(tab==='noticeboard') {
     const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
-    const posted = ANNOUNCEMENTS.map(a=>{
-      const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return `<div class="announcement-card">
-        <div class="ann-date">${a.title||'Notice'} · ${dt}${a.posted_by_name?' · '+a.posted_by_name:''}</div>
-        <div class="ann-body">${a.body||''}</div>
-      </div>`;
-    }).join('');
+    const posted = ANNOUNCEMENTS.map(a=>renderNoticeCard(a, isCoach)).join('');
     el.innerHTML = `<div style="height:12px"></div>
       ${isCoach?`<div style="padding:0 16px 12px"><button class="race-lineup-btn" onclick="openAddAnnouncement()">+ Post Notice</button></div>`:''}
       ${posted||'<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No notices posted yet.</div>'}`;
@@ -3557,12 +3565,41 @@ async function saveShiftAssignment(dateStr, shiftId) {
 async function openAddAnnouncement() {
   const title = prompt('Notice title (e.g. Schedule Change):'); if(!title) return;
   const body = prompt('Notice text:'); if(!body) return;
-  const rec = {club:HRC_CLUB,title,body,posted_by:CU.id,posted_by_name:CU.name,created_at:new Date().toISOString()};
+  const rec = {id:crypto.randomUUID(),club:HRC_CLUB,title,body,posted_by:CU.id,posted_by_name:CU.name,created_at:new Date().toISOString()};
   await supaInsert('hrc_announcements', rec);
   ANNOUNCEMENTS.unshift(rec);
   if(currentScreen==='athlete') switchAthleteTab('noticeboard');
   else switchParentTab('updates');
   toast('Notice posted');
+}
+
+async function editAnnouncement(id) {
+  const a = ANNOUNCEMENTS.find(x=>x.id===id);
+  if(!a) return;
+  const title = prompt('Notice title:', a.title||''); if(title===null) return;
+  const body = prompt('Notice text:', a.body||''); if(body===null) return;
+  const ok = await supaPatch('hrc_announcements', {id}, {title, body});
+  if(ok) {
+    a.title = title; a.body = body;
+    toast('Notice updated');
+    if(currentScreen==='athlete') switchAthleteTab('noticeboard');
+    else switchParentTab('updates');
+  } else {
+    toast('Update failed — try again');
+  }
+}
+
+async function deleteAnnouncement(id) {
+  if(!confirm('Delete this notice?')) return;
+  const ok = await supaDelete('hrc_announcements', {id});
+  if(ok) {
+    ANNOUNCEMENTS = ANNOUNCEMENTS.filter(a=>a.id!==id);
+    toast('Notice deleted');
+    if(currentScreen==='athlete') switchAthleteTab('noticeboard');
+    else switchParentTab('updates');
+  } else {
+    toast('Delete failed — try again');
+  }
 }
 
 async function openAddResource() {
@@ -3889,13 +3926,7 @@ function switchParentTab(tab) {
 
   if(tab==='updates') {
     const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
-    const posted = ANNOUNCEMENTS.map(a=>{
-      const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return `<div class="announcement-card">
-        <div class="ann-date">${a.title||'Notice'} · ${dt}${a.posted_by_name?' · '+a.posted_by_name:''}</div>
-        <div class="ann-body">${a.body||''}</div>
-      </div>`;
-    }).join('');
+    const posted = ANNOUNCEMENTS.map(a=>renderNoticeCard(a, isCoach)).join('');
     el.innerHTML = `<div style="height:12px"></div>
       ${isCoach?`<div style="padding:0 16px 12px"><button class="race-lineup-btn" onclick="openAddAnnouncement()">+ Post Notice</button></div>`:''}
       ${posted}
