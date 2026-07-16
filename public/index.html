@@ -4372,24 +4372,34 @@ function renderLtrAttendance() {
   if(!campers.length) {
     html += `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No campers assigned to ${LTR_CAMPS[ltrCampWeek].label}.</div>`;
   } else {
-    const presentCount = campers.filter(c=>{
+    const present = [];
+    const absent = [];
+    campers.forEach(c=>{
       const rec = LTR_ATTENDANCE.find(a=>a.camper_id===c.id && a.date===ltrSelectedDate);
-      return rec?.present;
-    }).length;
-    html += `<div style="padding:0 16px 10px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${presentCount}/${campers.length} present — ${dateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>`;
-    html += campers.map(c=>{
-      const rec = LTR_ATTENDANCE.find(a=>a.camper_id===c.id && a.date===ltrSelectedDate);
-      const present = !!rec?.present;
-      return `<div class="card" style="cursor:pointer;${present?'border-color:var(--green);':''}" onclick="toggleLtrAttendance('${c.id}')">
-        <div class="flex-between">
-          <div>
-            <div class="card-title">${c.name}</div>
-            <div class="card-sub">${c.grade||''}</div>
-          </div>
-          <div style="font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:${present?'var(--green)':'var(--text3)'}">${present?'Present':'Tap if here'}</div>
+      (rec?.present ? present : absent).push(c);
+    });
+
+    const camperRow = (c, isPresent) => `<div class="card" style="cursor:pointer;${isPresent?'border-color:var(--green);':''}" onclick="toggleLtrAttendance('${c.id}')">
+      <div class="flex-between">
+        <div>
+          <div class="card-title">${c.name}</div>
+          <div class="card-sub">${c.grade||''}</div>
         </div>
-      </div>`;
-    }).join('');
+        <div style="font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:${isPresent?'var(--green)':'var(--text3)'}">${isPresent?'Present':'Tap if here'}</div>
+      </div>
+    </div>`;
+
+    html += `<div style="padding:0 16px 10px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${present.length}/${campers.length} present — ${dateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>`;
+
+    html += `<div style="padding:8px 16px 4px"><div class="section-label" style="padding:0;color:var(--green)">Present (${present.length})</div></div>`;
+    html += present.length
+      ? present.map(c=>camperRow(c,true)).join('')
+      : `<div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">No one checked in yet.</div>`;
+
+    html += `<div style="padding:14px 16px 4px"><div class="section-label" style="padding:0;color:#e05c5c">Absent (${absent.length})</div></div>`;
+    html += absent.length
+      ? absent.map(c=>camperRow(c,false)).join('')
+      : `<div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">Everyone's checked in.</div>`;
   }
   el.innerHTML = html;
 }
