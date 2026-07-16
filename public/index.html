@@ -1587,21 +1587,29 @@ async function initApp() {
   document.querySelectorAll('.coach-cox-only').forEach(el=>{
     el.style.display = (isCoachRole || isCox) ? '' : 'none';
   });
-  buildHome();
-  buildSchedule();
-  buildRoster();
-  buildLineup();
-  buildCoachHub();
-  buildAthleteHub();
-  buildParentPortal();
-  buildMessages();
-  buildDocuments();
-  buildRankings();
-  buildLtr();
-  buildBoathouse();
-  populateAbsenceDropdown();
-  renderAbsenceList();
-  fetchWeather();
+  const safeBuild = (name, fn) => {
+    try {
+      const result = fn();
+      if(result && typeof result.catch === 'function') {
+        result.catch(e => console.error('BUILD STEP FAILED (async):', name, e));
+      }
+    } catch(e) { console.error('BUILD STEP FAILED:', name, e); }
+  };
+  safeBuild('buildHome', buildHome);
+  safeBuild('buildSchedule', buildSchedule);
+  safeBuild('buildRoster', buildRoster);
+  safeBuild('buildLineup', buildLineup);
+  safeBuild('buildCoachHub', buildCoachHub);
+  safeBuild('buildAthleteHub', buildAthleteHub);
+  safeBuild('buildParentPortal', buildParentPortal);
+  safeBuild('buildMessages', buildMessages);
+  safeBuild('buildDocuments', buildDocuments);
+  safeBuild('buildRankings', buildRankings);
+  safeBuild('buildLtr', buildLtr);
+  safeBuild('buildBoathouse', buildBoathouse);
+  safeBuild('populateAbsenceDropdown', populateAbsenceDropdown);
+  safeBuild('renderAbsenceList', renderAbsenceList);
+  safeBuild('fetchWeather', fetchWeather);
   go('home');
   setInterval(messagePoll, 8000);
 }
