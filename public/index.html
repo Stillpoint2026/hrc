@@ -1084,6 +1084,7 @@ body {
     </div>
     <div class="section">
       <div class="section-label">Saved Lineups</div>
+      <div id="lineupNotRacingPanel"></div>
       <div id="savedLineups"></div>
     </div>
   </div>
@@ -2060,7 +2061,42 @@ function toggleLineupExpand(id, event) {
   renderSavedLineups();
 }
 
+function renderNotRacingPanel() {
+  const el = document.getElementById('lineupNotRacingPanel');
+  if(!el) return;
+  const sel = document.getElementById('lineupRace');
+  const currentRace = sel ? sel.value : '';
+  if(!currentRace || currentRace === 'practice') { el.innerHTML = ''; return; }
+
+  const raceLineups = LINEUPS.filter(l=>l.race===currentRace);
+  if(!raceLineups.length) { el.innerHTML = ''; return; }
+
+  const racingNames = new Set();
+  raceLineups.forEach(l=>{
+    let seats = [];
+    try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
+    seats.forEach(s=>{ if(s) racingNames.add(s); });
+    if(l.cox) racingNames.add(l.cox);
+  });
+
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const notRacing = athletes.filter(a=>!racingNames.has(a.name)).sort(byLastName);
+
+  if(!notRacing.length) {
+    el.innerHTML = `<div class="card" style="margin-bottom:12px;border-color:var(--green)">
+      <div style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--green)">Everyone on the roster is assigned to a boat for this race.</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="card" style="margin-bottom:12px;border-color:#e05c5c">
+    <div style="font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#e05c5c;margin-bottom:8px">Not Racing (${notRacing.length})</div>
+    ${notRacing.map(a=>`<div style="padding:3px 0;font-family:-apple-system,sans-serif;font-size:13px;color:var(--text)">${a.name}${a.group?` <span style="color:var(--text3);font-weight:200">(${a.group})</span>`:''}</div>`).join('')}
+  </div>`;
+}
+
 function renderSavedLineups() {
+  renderNotRacingPanel();
   const el = document.getElementById('savedLineups');
   if(!el) return;
   const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
