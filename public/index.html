@@ -4473,7 +4473,7 @@ function renderBoathouseItems(category) {
           </div>
           <div style="text-align:right">
             <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
-            ${i.current_value?`<div style="font-family:'Courier New',monospace;font-size:12px;color:var(--text2);margin-top:2px">${fmtMoney(i.current_value)}</div>`:''}
+            ${i.current_value?`<div style="font-family:'Courier New',monospace;font-size:12px;color:var(--text2);margin-top:2px">${Number(i.current_value).toLocaleString()}</div>`:''}
           </div>
         </div>
         ${i.notes?`<div style="margin-top:6px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2)">${i.notes}</div>`:''}
