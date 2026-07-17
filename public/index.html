@@ -2693,12 +2693,7 @@ function nutritionGuideHTML() {
 
 function buildAthleteHub() { switchAthleteTab(athleteTab); }
 
-function switchAthleteTab(tab) {
-  athleteTab = tab;
-  document.querySelectorAll('#scr-athlete .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().replace(' ','')===tab));
-  const el = document.getElementById('athleteTabContent');
-
-  function renderNoticeCard(a, isCoach) {
+function renderNoticeCard(a, isCoach) {
   const dt = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
   return `<div class="announcement-card">
     <div class="flex-between">
@@ -2711,6 +2706,11 @@ function switchAthleteTab(tab) {
     <div class="ann-body">${a.body||''}</div>
   </div>`;
 }
+
+function switchAthleteTab(tab) {
+  athleteTab = tab;
+  document.querySelectorAll('#scr-athlete .tab').forEach(t=>t.classList.toggle('active',t.textContent.toLowerCase().replace(' ','')===tab));
+  const el = document.getElementById('athleteTabContent');
 
 if(tab==='noticeboard') {
     const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
