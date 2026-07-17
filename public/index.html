@@ -1002,7 +1002,9 @@ body {
         <div class="race-date-badge">Sat, Jul 18</div>
       </div>
       <div class="race-bd">
-        <button class="race-lineup-btn" onclick="openLineupForRace('Philadelphia Youth Regatta')">View Lineup</button>
+        <button class="race-lineup-btn coach-only" onclick="openLineupForRace('Philadelphia Youth Regatta')">View Lineup</button>
+        <button class="race-lineup-btn" onclick="toggleRaceSchedule()" style="margin-top:8px">Race Day Schedule</button>
+        <div id="raceScheduleContent" style="display:none;margin-top:10px"></div>
       </div>
     </div>
     <div class="race-card">
@@ -1128,6 +1130,7 @@ body {
       <div class="tab" onclick="switchAthleteTab('resources')">Resources</div>
       <div class="tab" onclick="switchAthleteTab('recruiting')">Recruiting</div>
       <div class="tab" onclick="switchAthleteTab('uniform')">Uniform</div>
+      <div class="tab" onclick="go('races')">Race Schedule</div>
       <div class="tab" onclick="go('messages')">Messages</div>
     </div>
     <div id="athleteTabContent"></div>
@@ -2452,6 +2455,35 @@ async function deleteLineup(id, event) {
     renderSavedLineups();
     toast('Lineup deleted');
   } else { toast('Delete failed — try again'); }
+}
+
+function toggleRaceSchedule() {
+  const el = document.getElementById('raceScheduleContent');
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  if(isOpen) { el.style.display = 'none'; return; }
+
+  const schedule = [
+    {arrive:'7:35 AM', team:'HAWK', boat:'417 8+', race:'9:05 AM'},
+    {arrive:'7:45 AM', team:'SJP', boat:'417 8+', race:'9:15 AM'},
+    {arrive:'8:41 AM', team:'SJP', boat:'419 4+', race:'10:11 AM'},
+    {arrive:'8:45 AM', team:'HAWK', boat:'419 4+', race:'10:15 AM'},
+    {arrive:'11:45 AM', team:'SJP', boat:'Pair', race:'1:15 PM'},
+    {arrive:'11:50 AM', team:'HAWK', boat:'Pair', race:'1:20 PM'},
+    {arrive:'1:05 PM', team:'SJP', boat:'417 4+ B', race:'2:35 PM'},
+    {arrive:'1:10 PM', team:'HAWK', boat:'417 4+', race:'2:40 PM'},
+    {arrive:'1:10 PM', team:'SJP', boat:'417 4+ A', race:'2:40 PM'},
+    {arrive:'2:49 PM', team:'HAWK', boat:'419 8+', race:'4:19 PM'},
+    {arrive:'2:49 PM', team:'SJP', boat:'419 8+', race:'4:19 PM'},
+  ];
+
+  el.innerHTML = `<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-bottom:8px">Arrive at the boathouse 1.5 hours before your race.</div>` +
+    schedule.map(s=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border2);font-family:-apple-system,sans-serif;font-size:13px">
+      <span style="color:var(--text)"><strong>${s.arrive}</strong> arrive</span>
+      <span style="color:var(--text2)">${s.team} ${s.boat}</span>
+      <span style="color:var(--text3)">race ${s.race}</span>
+    </div>`).join('');
+  el.style.display = 'block';
 }
 
 function openLineupForRace(race) {
