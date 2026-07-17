@@ -1196,6 +1196,9 @@ body {
     </div>
     <div class="tab-row">
       <div class="tab active" data-btab="parts" onclick="switchBoathouseTab('parts')">Parts &amp; Equipment</div>
+      <div class="tab" data-btab="shells" onclick="switchBoathouseTab('shells')">Shells</div>
+      <div class="tab" data-btab="launches" onclick="switchBoathouseTab('launches')">Launches</div>
+      <div class="tab" data-btab="engines" onclick="switchBoathouseTab('engines')">Engines</div>
       <div class="tab" data-btab="repairs" onclick="switchBoathouseTab('repairs')">Repairs</div>
       <div class="tab" data-btab="concessions" onclick="switchBoathouseTab('concessions')">Concessions</div>
       <div class="tab" data-btab="uniforms" onclick="switchBoathouseTab('uniforms')">Uniforms</div>
@@ -1364,6 +1367,12 @@ let LTR_ATTENDANCE = [];
 let BOATHOUSE_ITEMS = [];
 let REPAIRS = [];
 let RECRUITING_PROFILES = [];
+let SHELLS = [];
+let LAUNCHES = [];
+let ENGINES = [];
+let shellEditId = null;
+let launchEditId = null;
+let engineEditId = null;
 let boathouseTab = 'parts';
 let boathouseMfrFilter = 'All';
 let boathouseItemEditId = null;
@@ -1586,7 +1595,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs(), loadRecruitingProfiles()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs(), loadRecruitingProfiles(), loadShells(), loadLaunches(), loadEngines()]);
   await linkMemberRecord();
   const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
   const me = ATHLETES.find(a=>a.id===CU.member_id);
@@ -1680,6 +1689,21 @@ async function loadRepairs() {
 async function loadRecruitingProfiles() {
   const rows = await supaGet('hrc_recruiting_profiles', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'limit': '300'});
   RECRUITING_PROFILES = rows || [];
+}
+
+async function loadShells() {
+  const rows = await supaGet('hrc_boathouse_shells', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '300'});
+  SHELLS = rows || [];
+}
+
+async function loadLaunches() {
+  const rows = await supaGet('hrc_boathouse_launches', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'launch_number.asc', 'limit': '300'});
+  LAUNCHES = rows || [];
+}
+
+async function loadEngines() {
+  const rows = await supaGet('hrc_boathouse_engines', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'year.desc', 'limit': '300'});
+  ENGINES = rows || [];
 }
 
 async function loadShifts() {
@@ -4114,11 +4138,278 @@ function switchBoathouseTab(tab) {
   else if(tab==='concessions') renderBoathouseItems('concession');
   else if(tab==='repairs') renderRepairs();
   else if(tab==='uniforms') renderUniformsList();
+  else if(tab==='shells') renderShells();
+  else if(tab==='launches') renderLaunches();
+  else if(tab==='engines') renderEngines();
 }
 
 function setBoathouseMfrFilter(m) {
   boathouseMfrFilter = m;
   renderBoathouseItems('part');
+}
+
+// ── SHELLS (Fleet asset tracking) ──
+const ASSET_STATUSES = [
+  {id:'active', label:'Active', color:'#5a9a6a'},
+  {id:'sold', label:'Sold / Retired', color:'#8a8a8a'},
+];
+
+function fmtMoney(v) {
+  if(v===null || v===undefined || v==='') return '—';
+  return '$' + Number(v).toLocaleString();
+}
+
+function renderShells() {
+  const el = document.getElementById('boathouseTabContent');
+  const active = SHELLS.filter(s=>s.status!=='sold').sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const sold = SHELLS.filter(s=>s.status==='sold').sort((a,b)=>(b.year||0)-(a.year||0));
+  const totalValue = active.reduce((sum,s)=>sum+(Number(s.current_value)||0),0);
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Shells</div>
+    <button class="race-lineup-btn" onclick="openShellForm(null)">+ Add Shell</button>
+  </div>
+  <div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${active.length} active · Total value ${fmtMoney(totalValue)}</div>`;
+
+  html += active.map(s=>`<div class="card" style="cursor:pointer" onclick="openShellForm('${s.id}')">
+    <div class="flex-between">
+      <div>
+        <div class="card-title">${s.name}${s.dedication_name?` <span style="font-weight:200;color:var(--text3)">— ${s.dedication_name}</span>`:''}</div>
+        <div class="card-sub">${s.year||''} ${s.manufacturer||''} ${s.model||''}${s.size?' · '+s.size:''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Courier New',monospace;font-size:13px;color:var(--text)">${fmtMoney(s.current_value)}</div>
+      </div>
+    </div>
+  </div>`).join('');
+
+  if(sold.length) {
+    html += `<div style="padding:16px 16px 4px"><div class="section-label" style="padding:0;color:var(--text3)">Sold / Retired (${sold.length})</div></div>`;
+    html += sold.map(s=>`<div class="card" style="cursor:pointer;opacity:0.6" onclick="openShellForm('${s.id}')">
+      <div class="flex-between">
+        <div>
+          <div class="card-title">${s.name}${s.dedication_name?` <span style="font-weight:200">— ${s.dedication_name}</span>`:''}</div>
+          <div class="card-sub">${s.year||''} ${s.manufacturer||''} ${s.model||''}${s.value_notes?' · '+s.value_notes:''}</div>
+        </div>
+        <div style="font-family:'Courier New',monospace;font-size:13px">${fmtMoney(s.cost)}</div>
+      </div>
+    </div>`).join('');
+  }
+  el.innerHTML = html;
+}
+
+function openShellForm(id) {
+  shellEditId = id || null;
+  const s = id ? SHELLS.find(x=>x.id===id) : null;
+  const el = document.getElementById('boathouseTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group"><label class="pr-label">Shell Name</label><input class="form-input" id="shName" placeholder="e.g. No Name" value="${s?.name||''}"></div>
+    <div class="form-group"><label class="pr-label">Dedication / Full Name</label><input class="form-input" id="shDedication" placeholder="e.g. James F. &quot;Mace&quot; Thompson, '59" value="${s?.dedication_name||''}"></div>
+    <div class="form-group"><label class="pr-label">Class</label>
+      <select class="form-select" id="shClass">
+        ${BOAT_CLASSES.map(c=>`<option value="${c.id}" ${s?.boat_class===c.id?'selected':''}>${c.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label class="pr-label">Year</label><input class="form-input" id="shYear" type="number" value="${s?.year||''}"></div>
+    <div class="form-group"><label class="pr-label">Manufacturer</label><input class="form-input" id="shMfr" list="mfrOptions" value="${s?.manufacturer||''}"></div>
+    <div class="form-group"><label class="pr-label">Model</label><input class="form-input" id="shModel" placeholder="e.g. Racing 8+, USP, SP" value="${s?.model||''}"></div>
+    <div class="form-group"><label class="pr-label">Size</label><input class="form-input" id="shSize" placeholder="e.g. R84, S8.21" value="${s?.size||''}"></div>
+    <div class="form-group"><label class="pr-label">Serial #</label><input class="form-input" id="shSerial" value="${s?.serial_number||''}"></div>
+    <div class="form-group"><label class="pr-label">Cost</label><input class="form-input" id="shCost" type="number" value="${s?.cost||''}"></div>
+    <div class="form-group"><label class="pr-label">Current Value</label><input class="form-input" id="shCurrentValue" type="number" value="${s?.current_value||''}"></div>
+    <div class="form-group"><label class="pr-label">Value Notes</label><input class="form-input" id="shValueNotes" placeholder="e.g. replacement from flood" value="${s?.value_notes||''}"></div>
+    <div class="form-group"><label class="pr-label">Status</label>
+      <select class="form-select" id="shStatus">
+        ${ASSET_STATUSES.map(a=>`<option value="${a.id}" ${(s?.status||'active')===a.id?'selected':''}>${a.label}</option>`).join('')}
+      </select>
+    </div>
+    <button class="submit-btn" onclick="saveShell()">${s?'Save Changes':'Add Shell'}</button>
+    ${s?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteShell('${s.id}')">Delete</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('shells')">Cancel</button>
+    <div id="shMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveShell() {
+  const msgEl = document.getElementById('shMsg');
+  const name = document.getElementById('shName').value.trim();
+  if(!name) { msgEl.textContent='Shell name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const fields = {
+    name, dedication_name: document.getElementById('shDedication').value.trim(),
+    boat_class: document.getElementById('shClass').value,
+    year: document.getElementById('shYear').value ? parseInt(document.getElementById('shYear').value) : null,
+    manufacturer: document.getElementById('shMfr').value.trim(),
+    model: document.getElementById('shModel').value.trim(),
+    size: document.getElementById('shSize').value.trim(),
+    serial_number: document.getElementById('shSerial').value.trim(),
+    cost: document.getElementById('shCost').value ? parseFloat(document.getElementById('shCost').value) : null,
+    current_value: document.getElementById('shCurrentValue').value ? parseFloat(document.getElementById('shCurrentValue').value) : null,
+    value_notes: document.getElementById('shValueNotes').value.trim(),
+    status: document.getElementById('shStatus').value,
+  };
+  if(shellEditId) {
+    const ok = await supaPatch('hrc_boathouse_shells', {id: shellEditId}, fields);
+    if(ok) { const s = SHELLS.find(x=>x.id===shellEditId); if(s) Object.assign(s, fields); toast('Shell updated'); switchBoathouseTab('shells'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_boathouse_shells', rec);
+    if(res) { SHELLS.push(rec); toast('Shell added'); switchBoathouseTab('shells'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteShell(id) {
+  if(!confirm('Delete this shell record?')) return;
+  const ok = await supaDelete('hrc_boathouse_shells', {id});
+  if(ok) { SHELLS = SHELLS.filter(s=>s.id!==id); toast('Deleted'); }
+  switchBoathouseTab('shells');
+}
+
+// ── LAUNCHES ──
+function renderLaunches() {
+  const el = document.getElementById('boathouseTabContent');
+  const rows = LAUNCHES.slice().sort((a,b)=>(a.launch_number||0)-(b.launch_number||0));
+  const totalValue = rows.reduce((sum,l)=>sum+(Number(l.current_value)||0),0);
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Launches</div>
+    <button class="race-lineup-btn" onclick="openLaunchForm(null)">+ Add Launch</button>
+  </div>
+  <div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${rows.length} launches · Total value ${fmtMoney(totalValue)}</div>`;
+
+  html += rows.map(l=>`<div class="card" style="cursor:pointer" onclick="openLaunchForm('${l.id}')">
+    <div class="flex-between">
+      <div>
+        <div class="card-title">Launch ${l.launch_number ?? '—'}</div>
+        <div class="card-sub">${l.year||''} ${l.manufacturer||''} ${l.model||''}${l.notes?' · '+l.notes:''}</div>
+      </div>
+      <div style="font-family:'Courier New',monospace;font-size:13px;color:var(--text)">${fmtMoney(l.current_value)}</div>
+    </div>
+  </div>`).join('') || '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No launches yet.</div>';
+  el.innerHTML = html;
+}
+
+function openLaunchForm(id) {
+  launchEditId = id || null;
+  const l = id ? LAUNCHES.find(x=>x.id===id) : null;
+  const el = document.getElementById('boathouseTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group"><label class="pr-label">Launch Number</label><input class="form-input" id="lnNumber" type="number" value="${l?.launch_number??''}"></div>
+    <div class="form-group"><label class="pr-label">Year</label><input class="form-input" id="lnYear" type="number" value="${l?.year||''}"></div>
+    <div class="form-group"><label class="pr-label">Manufacturer</label><input class="form-input" id="lnMfr" value="${l?.manufacturer||''}"></div>
+    <div class="form-group"><label class="pr-label">Model</label><input class="form-input" id="lnModel" value="${l?.model||''}"></div>
+    <div class="form-group"><label class="pr-label">Serial #</label><input class="form-input" id="lnSerial" value="${l?.serial_number||''}"></div>
+    <div class="form-group"><label class="pr-label">Cost</label><input class="form-input" id="lnCost" type="number" value="${l?.cost||''}"></div>
+    <div class="form-group"><label class="pr-label">Current Value</label><input class="form-input" id="lnCurrentValue" type="number" value="${l?.current_value||''}"></div>
+    <div class="form-group"><label class="pr-label">Notes</label><input class="form-input" id="lnNotes" placeholder="e.g. damaged but recovered in flood" value="${l?.notes||''}"></div>
+    <button class="submit-btn" onclick="saveLaunch()">${l?'Save Changes':'Add Launch'}</button>
+    ${l?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteLaunch('${l.id}')">Delete</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('launches')">Cancel</button>
+    <div id="lnMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveLaunch() {
+  const msgEl = document.getElementById('lnMsg');
+  const fields = {
+    launch_number: document.getElementById('lnNumber').value ? parseInt(document.getElementById('lnNumber').value) : null,
+    year: document.getElementById('lnYear').value ? parseInt(document.getElementById('lnYear').value) : null,
+    manufacturer: document.getElementById('lnMfr').value.trim(),
+    model: document.getElementById('lnModel').value.trim(),
+    serial_number: document.getElementById('lnSerial').value.trim(),
+    cost: document.getElementById('lnCost').value ? parseFloat(document.getElementById('lnCost').value) : null,
+    current_value: document.getElementById('lnCurrentValue').value ? parseFloat(document.getElementById('lnCurrentValue').value) : null,
+    notes: document.getElementById('lnNotes').value.trim(),
+  };
+  if(launchEditId) {
+    const ok = await supaPatch('hrc_boathouse_launches', {id: launchEditId}, fields);
+    if(ok) { const l = LAUNCHES.find(x=>x.id===launchEditId); if(l) Object.assign(l, fields); toast('Launch updated'); switchBoathouseTab('launches'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_boathouse_launches', rec);
+    if(res) { LAUNCHES.push(rec); toast('Launch added'); switchBoathouseTab('launches'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteLaunch(id) {
+  if(!confirm('Delete this launch record?')) return;
+  const ok = await supaDelete('hrc_boathouse_launches', {id});
+  if(ok) { LAUNCHES = LAUNCHES.filter(l=>l.id!==id); toast('Deleted'); }
+  switchBoathouseTab('launches');
+}
+
+// ── ENGINES ──
+function renderEngines() {
+  const el = document.getElementById('boathouseTabContent');
+  const rows = ENGINES.slice().sort((a,b)=>(b.year||0)-(a.year||0));
+  const totalValue = rows.reduce((sum,e)=>sum+(Number(e.current_value)||0),0);
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Engines</div>
+    <button class="race-lineup-btn" onclick="openEngineForm(null)">+ Add Engine</button>
+  </div>
+  <div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">${rows.length} engines · Total value ${fmtMoney(totalValue)}</div>`;
+
+  html += rows.map(e=>`<div class="card" style="cursor:pointer" onclick="openEngineForm('${e.id}')">
+    <div class="flex-between">
+      <div>
+        <div class="card-title">${e.year||''} ${e.manufacturer||''} ${e.model||''}</div>
+        <div class="card-sub">${e.serial_number||''}${e.notes?' · '+e.notes:''}</div>
+      </div>
+      <div style="font-family:'Courier New',monospace;font-size:13px;color:var(--text)">${fmtMoney(e.current_value)}</div>
+    </div>
+  </div>`).join('') || '<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No engines yet.</div>';
+  el.innerHTML = html;
+}
+
+function openEngineForm(id) {
+  engineEditId = id || null;
+  const e = id ? ENGINES.find(x=>x.id===id) : null;
+  const el = document.getElementById('boathouseTabContent');
+  el.innerHTML = `<div class="absence-form">
+    <div class="form-group"><label class="pr-label">Year</label><input class="form-input" id="enYear" type="number" value="${e?.year||''}"></div>
+    <div class="form-group"><label class="pr-label">Manufacturer</label><input class="form-input" id="enMfr" value="${e?.manufacturer||''}"></div>
+    <div class="form-group"><label class="pr-label">Model / HP</label><input class="form-input" id="enModel" placeholder="e.g. 30HP" value="${e?.model||''}"></div>
+    <div class="form-group"><label class="pr-label">Serial #</label><input class="form-input" id="enSerial" value="${e?.serial_number||''}"></div>
+    <div class="form-group"><label class="pr-label">Cost</label><input class="form-input" id="enCost" type="number" value="${e?.cost||''}"></div>
+    <div class="form-group"><label class="pr-label">Current Value</label><input class="form-input" id="enCurrentValue" type="number" value="${e?.current_value||''}"></div>
+    <div class="form-group"><label class="pr-label">Notes</label><input class="form-input" id="enNotes" placeholder="e.g. damaged in flood but recovered" value="${e?.notes||''}"></div>
+    <button class="submit-btn" onclick="saveEngine()">${e?'Save Changes':'Add Engine'}</button>
+    ${e?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteEngine('${e.id}')">Delete</button>`:''}
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('engines')">Cancel</button>
+    <div id="enMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveEngine() {
+  const msgEl = document.getElementById('enMsg');
+  const fields = {
+    year: document.getElementById('enYear').value ? parseInt(document.getElementById('enYear').value) : null,
+    manufacturer: document.getElementById('enMfr').value.trim(),
+    model: document.getElementById('enModel').value.trim(),
+    serial_number: document.getElementById('enSerial').value.trim(),
+    cost: document.getElementById('enCost').value ? parseFloat(document.getElementById('enCost').value) : null,
+    current_value: document.getElementById('enCurrentValue').value ? parseFloat(document.getElementById('enCurrentValue').value) : null,
+    notes: document.getElementById('enNotes').value.trim(),
+  };
+  if(engineEditId) {
+    const ok = await supaPatch('hrc_boathouse_engines', {id: engineEditId}, fields);
+    if(ok) { const e = ENGINES.find(x=>x.id===engineEditId); if(e) Object.assign(e, fields); toast('Engine updated'); switchBoathouseTab('engines'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  } else {
+    const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
+    const res = await supaInsert('hrc_boathouse_engines', rec);
+    if(res) { ENGINES.push(rec); toast('Engine added'); switchBoathouseTab('engines'); }
+    else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
+  }
+}
+
+async function deleteEngine(id) {
+  if(!confirm('Delete this engine record?')) return;
+  const ok = await supaDelete('hrc_boathouse_engines', {id});
+  if(ok) { ENGINES = ENGINES.filter(e=>e.id!==id); toast('Deleted'); }
+  switchBoathouseTab('engines');
 }
 
 function renderBoathouseItems(category) {
@@ -4146,7 +4437,10 @@ function renderBoathouseItems(category) {
             <div class="card-title">${i.name}</div>
             <div class="card-sub">Qty: ${i.quantity ?? '—'}${i.manufacturer?' · '+i.manufacturer:''}</div>
           </div>
-          <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
+          <div style="text-align:right">
+            <div style="font-family:-apple-system,sans-serif;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:${st.color}">${st.label}</div>
+            ${i.current_value?`<div style="font-family:'Courier New',monospace;font-size:12px;color:var(--text2);margin-top:2px">${fmtMoney(i.current_value)}</div>`:''}
+          </div>
         </div>
         ${i.notes?`<div style="margin-top:6px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2)">${i.notes}</div>`:''}
       </div>`;
@@ -4167,6 +4461,14 @@ function openBoathouseItemForm(id, category) {
     <div class="form-group">
       <label class="pr-label">Quantity</label>
       <input class="form-input" id="bhItemQty" type="number" value="${i?.quantity ?? ''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Cost</label>
+      <input class="form-input" id="bhItemCost" type="number" placeholder="Total or per-unit cost" value="${i?.cost ?? ''}">
+    </div>
+    <div class="form-group">
+      <label class="pr-label">Current Value</label>
+      <input class="form-input" id="bhItemCurrentValue" type="number" value="${i?.current_value ?? ''}">
     </div>
     ${category==='part'?`<div class="form-group">
       <label class="pr-label">Manufacturer</label>
@@ -4192,12 +4494,14 @@ function openBoathouseItemForm(id, category) {
 async function saveBoathouseItem(category) {
   const name = document.getElementById('bhItemName').value.trim();
   const quantity = document.getElementById('bhItemQty').value.trim();
+  const cost = document.getElementById('bhItemCost')?.value.trim() || '';
+  const current_value = document.getElementById('bhItemCurrentValue')?.value.trim() || '';
   const manufacturer = document.getElementById('bhItemMfr')?.value.trim() || null;
   const status = document.getElementById('bhItemStatus').value;
   const notes = document.getElementById('bhItemNotes').value.trim();
   const msgEl = document.getElementById('bhItemMsg');
   if(!name) { msgEl.textContent='Name is required.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
-  const fields = {name, quantity: quantity===''?null:parseInt(quantity), manufacturer, status, notes, category, updated_by_name: CU.name, updated_at: new Date().toISOString()};
+  const fields = {name, quantity: quantity===''?null:parseInt(quantity), cost: cost===''?null:parseFloat(cost), current_value: current_value===''?null:parseFloat(current_value), manufacturer, status, notes, category, updated_by_name: CU.name, updated_at: new Date().toISOString()};
 
   if(boathouseItemEditId) {
     const ok = await supaPatch('hrc_boathouse_items', {id: boathouseItemEditId}, fields);
