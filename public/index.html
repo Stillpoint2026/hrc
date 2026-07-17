@@ -1196,6 +1196,7 @@ body {
     </div>
     <div class="tab-row">
       <div class="tab active" data-btab="parts" onclick="switchBoathouseTab('parts')">Parts &amp; Equipment</div>
+      <div class="tab" data-btab="facility" onclick="switchBoathouseTab('facility')">Facility</div>
       <div class="tab" data-btab="shells" onclick="switchBoathouseTab('shells')">Shells</div>
       <div class="tab" data-btab="launches" onclick="switchBoathouseTab('launches')">Launches</div>
       <div class="tab" data-btab="engines" onclick="switchBoathouseTab('engines')">Engines</div>
@@ -4143,6 +4144,7 @@ function switchBoathouseTab(tab) {
   boathouseTab = tab;
   document.querySelectorAll('#scr-boathouse .tab').forEach(t=>t.classList.toggle('active', t.dataset.btab===tab));
   if(tab==='parts') renderBoathouseItems('part');
+  else if(tab==='facility') renderBoathouseItems('facility');
   else if(tab==='concessions') renderBoathouseItems('concession');
   else if(tab==='repairs') renderRepairs();
   else if(tab==='uniforms') renderUniformsList();
@@ -4423,11 +4425,15 @@ async function deleteEngine(id) {
 function renderBoathouseItems(category) {
   const el = document.getElementById('boathouseTabContent');
   let items = BOATHOUSE_ITEMS.filter(i=>i.category===category).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  const label = category==='part' ? 'Part / Equipment' : 'Item';
+  const label = category==='part' ? 'Part / Equipment' : category==='facility' ? 'Facility Item' : 'Item';
+  const sectionTitle = category==='part' ? 'Parts & Equipment' : category==='facility' ? 'Facility' : 'Concessions';
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
-    <div class="section-label" style="padding:0">${category==='part'?'Parts & Equipment':'Concessions'}</div>
+    <div class="section-label" style="padding:0">${sectionTitle}</div>
     <button class="race-lineup-btn" onclick="openBoathouseItemForm(null,'${category}')">+ Add ${label}</button>
   </div>`;
+  if(category==='facility') {
+    html += `<div style="padding:0 16px 12px;font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3)">General facility contents — furniture, electronics, and safety equipment (not rowing-specific parts).</div>`;
+  }
   if(category==='part') {
     html += `<div class="filter-strip" style="padding:0 16px 12px;border:none">
       ${['All','Empacher','Hudson','Vespoli','NK','Peach'].map(m=>`<div class="fpill${m===boathouseMfrFilter?' active':''}" onclick="setBoathouseMfrFilter('${m}')">${m}</div>`).join('')}
@@ -4514,7 +4520,7 @@ function openBoathouseItemForm(id, category) {
     </div>
     <button class="submit-btn" onclick="saveBoathouseItem('${category}')">${i?'Save Changes':'Add'}</button>
     ${i?`<button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="deleteBoathouseItem('${i.id}','${category}')">Delete</button>`:''}
-    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('${category==='part'?'parts':'concessions'}')">Cancel</button>
+    <button class="submit-btn" style="background:transparent;border:1px solid var(--border2);color:var(--text3);margin-top:8px" onclick="switchBoathouseTab('${category==='part'?'parts':category==='facility'?'facility':'concessions'}')">Cancel</button>
     <div id="bhItemMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
   </div>`;
 }
@@ -4536,12 +4542,12 @@ async function saveBoathouseItem(category) {
     if(ok) {
       const i = BOATHOUSE_ITEMS.find(x=>x.id===boathouseItemEditId);
       if(i) Object.assign(i, fields);
-      toast('Updated'); switchBoathouseTab(category==='part'?'parts':'concessions');
+      toast('Updated'); switchBoathouseTab(category==='part'?'parts':category==='facility'?'facility':'concessions');
     } else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
   } else {
     const rec = {id: crypto.randomUUID(), club: HRC_CLUB, ...fields, created_at: new Date().toISOString()};
     const res = await supaInsert('hrc_boathouse_items', rec);
-    if(res) { BOATHOUSE_ITEMS.push(rec); toast('Added'); switchBoathouseTab(category==='part'?'parts':'concessions'); }
+    if(res) { BOATHOUSE_ITEMS.push(rec); toast('Added'); switchBoathouseTab(category==='part'?'parts':category==='facility'?'facility':'concessions'); }
     else { msgEl.textContent='Save failed — try again.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; }
   }
 }
@@ -4550,7 +4556,7 @@ async function deleteBoathouseItem(id, category) {
   if(!confirm('Remove this item?')) return;
   const ok = await supaDelete('hrc_boathouse_items', {id});
   if(ok) { BOATHOUSE_ITEMS = BOATHOUSE_ITEMS.filter(i=>i.id!==id); toast('Removed'); }
-  switchBoathouseTab(category==='part'?'parts':'concessions');
+  switchBoathouseTab(category==='part'?'parts':category==='facility'?'facility':'concessions');
 }
 
 function renderUniformsList() {
