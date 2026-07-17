@@ -2105,7 +2105,10 @@ function renderNotRacingPanel() {
   });
 
   const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
-  const notRacing = athletes.filter(a=>!racingNames.has(a.name)).sort(byLastName);
+  // Temporary exclusion: "John Amendt" is a known duplicate account of "John Amendt IV" (who is racing),
+  // pending confirmation of which login to keep. Remove this line once that's resolved.
+  const notRacingExclusions = ['John Amendt'];
+  const notRacing = athletes.filter(a=>!racingNames.has(a.name) && !notRacingExclusions.includes(a.name)).sort(byLastName);
 
   if(!notRacing.length) {
     el.innerHTML = `<div class="card" style="margin-bottom:12px;border-color:var(--green)">
