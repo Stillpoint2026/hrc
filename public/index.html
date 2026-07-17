@@ -1591,7 +1591,7 @@ async function initApp() {
     el.style.display = CU.role==='parent' ? '' : 'none';
   });
   document.querySelectorAll('.head-coach-only').forEach(el=>{
-    el.style.display = CU.role==='head-coach' ? '' : 'none';
+    el.style.display = ['head-coach','admin'].includes(CU.role) ? '' : 'none';
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
@@ -1984,7 +1984,7 @@ function buildRoster() {
       <div class="athlete-avatar" style="background:${color}">${initials}</div>
       <div class="athlete-info">
         <div class="athlete-name" style="display:flex;align-items:center">${a.name} ${groupBadge}${sideDot}</div>
-        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':(sm?sm.label:'Rower')}</div>
+        <div class="athlete-meta">${a.role==='head-coach'?'Head Coach':a.role==='admin'?'Admin':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':(sm?sm.label:'Rower')}</div>
       </div>
     </div>`;
   }).join('');
@@ -3722,7 +3722,7 @@ function openNewThreadForm() {
         <option value="All">All Athletes</option>
         <option value="U19">U19</option>
         <option value="U17">U17</option>
-        ${CU.role==='head-coach'?`<option value="Parents">Parents</option>`:''}
+        ${['head-coach','admin'].includes(CU.role)?`<option value="Parents">Parents</option>`:''}
       </select>
     </div>
     <div class="form-group">
@@ -5050,10 +5050,10 @@ function switchParentTab(tab) {
       </div>
       <div class="section">
         <div class="section-label">Coaches</div>
-        ${ATHLETES.filter(a=>['head-coach','asst-coach'].includes(a.role)).map(c=>`
+        ${ATHLETES.filter(a=>['head-coach','asst-coach','admin'].includes(a.role)).map(c=>`
           <div class="card">
             <div class="card-title">${c.name}</div>
-            <div class="card-sub">${c.role==='head-coach'?'Head Coach':'Coach'}</div>
+            <div class="card-sub">${c.role==='head-coach'?'Head Coach':c.role==='admin'?'Admin':'Coach'}</div>
             ${c.email?`<div style="margin-top:6px"><a href="mailto:${c.email}" style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--crimson)">${c.email}</a></div>`:''}
             ${c.phone?`<div style="margin-top:2px"><a href="tel:${c.phone}" style="font-family:-apple-system,sans-serif;font-size:12px;color:var(--crimson)">${c.phone}</a></div>`:''}
           </div>`).join('') || '<div class="card"><div class="card-sub">Coaching staff will appear here.</div></div>'}
@@ -5247,7 +5247,7 @@ function openAthleteDetail(id) {
   document.getElementById('athleteModalContent').innerHTML = `
     <div class="detail-hero" style="background:${color}">
       <div class="detail-name">${a.name}</div>
-      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':(sideMeta(a.side)?sideMeta(a.side).label:'Rower')}</div>
+      <div class="detail-role">${a.group||''} ${a.role==='head-coach'?'Head Coach':a.role==='admin'?'Admin':a.role==='asst-coach'?'Coach':a.role==='parent'?'Parent/Guardian':(sideMeta(a.side)?sideMeta(a.side).label:'Rower')}</div>
     </div>
     <div class="stat-grid">
       <div class="stat-cell"><div class="stat-val">${best2k?fmtTime(best2k.time_seconds):'—'}</div><div class="stat-lbl">Best 2k</div></div>
