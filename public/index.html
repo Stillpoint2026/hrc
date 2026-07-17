@@ -1126,6 +1126,7 @@ body {
       <div class="tab" onclick="switchAthleteTab('core')">Core</div>
       <div class="tab" onclick="switchAthleteTab('resources')">Resources</div>
       <div class="tab" onclick="switchAthleteTab('recruiting')">Recruiting</div>
+      <div class="tab" onclick="switchAthleteTab('uniform')">Uniform</div>
       <div class="tab" onclick="go('messages')">Messages</div>
     </div>
     <div id="athleteTabContent"></div>
@@ -1193,6 +1194,7 @@ body {
       <div class="tab active" data-btab="parts" onclick="switchBoathouseTab('parts')">Parts &amp; Equipment</div>
       <div class="tab" data-btab="repairs" onclick="switchBoathouseTab('repairs')">Repairs</div>
       <div class="tab" data-btab="concessions" onclick="switchBoathouseTab('concessions')">Concessions</div>
+      <div class="tab" data-btab="uniforms" onclick="switchBoathouseTab('uniforms')">Uniforms</div>
     </div>
     <div id="boathouseTabContent"></div>
   </div>
@@ -1359,6 +1361,7 @@ let BOATHOUSE_ITEMS = [];
 let REPAIRS = [];
 let RECRUITING_PROFILES = [];
 let boathouseTab = 'parts';
+let boathouseMfrFilter = 'All';
 let boathouseItemEditId = null;
 let repairEditId = null;
 let ltrTab = 'roster';
@@ -2774,6 +2777,9 @@ if(tab==='noticeboard') {
   } else if(tab==='recruiting') {
     renderRecruitingProfile();
 
+  } else if(tab==='uniform') {
+    renderUniformSelfService();
+
   } else if(tab==='resources') {
     const isCoach = ['head-coach','asst-coach','admin'].includes(CU.role);
     el.innerHTML = `
@@ -2871,6 +2877,40 @@ function renderRecruitingProfile() {
     <button class="submit-btn" onclick="saveRecruitingProfile()">Save Profile</button>
     <div id="recMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
   </div>`;
+}
+
+function renderUniformSelfService() {
+  const el = document.getElementById('athleteTabContent');
+  const me = ATHLETES.find(a=>a.id===CU.member_id) || {};
+  const sizes = ['XS','S','M','L','XL','XXL'];
+  el.innerHTML = `<div class="absence-form">
+    <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">Set your uniform size so coaches can plan Crewroom orders. Update it any time if it changes.</div>
+    <div class="form-group">
+      <label class="pr-label">Uniform Size</label>
+      <select class="form-select" id="uniSize">
+        <option value="">Select a size…</option>
+        ${sizes.map(s=>`<option value="${s}" ${me.uniform_size===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <button class="submit-btn" onclick="saveUniformSize()">Save</button>
+    <div id="uniMsg" style="margin-top:12px;font-family:-apple-system,sans-serif;font-size:12px;text-align:center;display:none"></div>
+  </div>`;
+}
+
+async function saveUniformSize() {
+  const size = document.getElementById('uniSize').value;
+  const msgEl = document.getElementById('uniMsg');
+  if(!CU.member_id) { msgEl.textContent='No member record found — sign out and back in.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  if(!size) { msgEl.textContent='Please select a size.'; msgEl.style.color='#e05c5c'; msgEl.style.display='block'; return; }
+  const ok = await supaPatch('hrc_members', {id: CU.member_id}, {uniform_size: size});
+  const me = ATHLETES.find(a=>a.id===CU.member_id);
+  if(ok) {
+    if(me) me.uniform_size = size;
+    msgEl.style.color='var(--green)'; msgEl.textContent='Uniform size saved.'; toast('Saved');
+  } else {
+    msgEl.style.color='#e05c5c'; msgEl.textContent='Save failed — try again.';
+  }
+  msgEl.style.display='block';
 }
 
 async function saveRecruitingProfile() {
@@ -4001,16 +4041,28 @@ function switchBoathouseTab(tab) {
   if(tab==='parts') renderBoathouseItems('part');
   else if(tab==='concessions') renderBoathouseItems('concession');
   else if(tab==='repairs') renderRepairs();
+  else if(tab==='uniforms') renderUniformsList();
+}
+
+function setBoathouseMfrFilter(m) {
+  boathouseMfrFilter = m;
+  renderBoathouseItems('part');
 }
 
 function renderBoathouseItems(category) {
   const el = document.getElementById('boathouseTabContent');
-  const items = BOATHOUSE_ITEMS.filter(i=>i.category===category).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  let items = BOATHOUSE_ITEMS.filter(i=>i.category===category).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   const label = category==='part' ? 'Part / Equipment' : 'Item';
   let html = `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 4px">
     <div class="section-label" style="padding:0">${category==='part'?'Parts & Equipment':'Concessions'}</div>
     <button class="race-lineup-btn" onclick="openBoathouseItemForm(null,'${category}')">+ Add ${label}</button>
   </div>`;
+  if(category==='part') {
+    html += `<div class="filter-strip" style="padding:0 16px 12px;border:none">
+      ${['All','Empacher','Hudson','NK','Peach'].map(m=>`<div class="fpill${m===boathouseMfrFilter?' active':''}" onclick="setBoathouseMfrFilter('${m}')">${m}</div>`).join('')}
+    </div>`;
+    if(boathouseMfrFilter!=='All') items = items.filter(i=>(i.manufacturer||'').toLowerCase()===boathouseMfrFilter.toLowerCase());
+  }
   if(!items.length) {
     html += `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">Nothing here yet.</div>`;
   } else {
@@ -4095,6 +4147,22 @@ async function deleteBoathouseItem(id, category) {
   const ok = await supaDelete('hrc_boathouse_items', {id});
   if(ok) { BOATHOUSE_ITEMS = BOATHOUSE_ITEMS.filter(i=>i.id!==id); toast('Removed'); }
   switchBoathouseTab(category==='part'?'parts':'concessions');
+}
+
+function renderUniformsList() {
+  const el = document.getElementById('boathouseTabContent');
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  const reported = athletes.filter(a=>a.uniform_size);
+  el.innerHTML = `<div style="padding:14px 16px 4px">
+    <div class="section-label" style="padding:0">Uniform Sizes</div>
+    <div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;margin-top:4px">${reported.length}/${athletes.length} athletes have submitted a size. Athletes set this themselves in Athlete Hub → Uniform.</div>
+  </div>` +
+  athletes.map(a=>`<div class="card">
+    <div class="flex-between">
+      <div class="card-title">${a.name}${a.group?` <span class="badge badge-${a.group==='U19'?'u19':'u17'}">${a.group}</span>`:''}</div>
+      <div style="font-family:-apple-system,sans-serif;font-size:13px;color:${a.uniform_size?'var(--text)':'var(--text3)'}">${a.uniform_size||'Not submitted'}</div>
+    </div>
+  </div>`).join('');
 }
 
 function renderRepairs() {
@@ -4428,19 +4496,24 @@ function buildRankings() {
   const filterEl = document.getElementById('rankingsFilter');
   if(!el || !filterEl) return;
 
-  filterEl.innerHTML = [{id:'2k',label:'2,000m'},{id:'6k',label:'6,000m'}].map(t=>
+  filterEl.innerHTML = [{id:'2k',label:'2,000m'},{id:'6k',label:'6,000m'},{id:'500m',label:'500m'}].map(t=>
     `<div class="fpill${t.id===rankingsTest?' active':''}" onclick="setRankingsTest('${t.id}')">${t.label}</div>`
   ).join('');
 
   const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
   const ranked = athletes.map(a=>{
-    const scores = ERG_SCORES.filter(e=>e.athlete_id===a.id && (rankingsTest==='2k' ? is2kTest(e.test) : e.test==='6k'));
+    const scores = ERG_SCORES.filter(e=>e.athlete_id===a.id && (
+      rankingsTest==='2k' ? is2kTest(e.test) :
+      rankingsTest==='500m' ? ['8x500','500m'].includes(e.test) :
+      e.test==='6k'
+    ));
     const best = scores.sort((x,y)=>x.time_seconds-y.time_seconds)[0];
     return best ? {athlete:a, time:best.time_seconds, date:best.date} : null;
   }).filter(Boolean).sort((a,b)=>a.time-b.time);
 
   if(!ranked.length) {
-    el.innerHTML = `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No ${rankingsTest==='2k'?'2k':'6k'} times recorded yet.</div>`;
+    const testLabel = rankingsTest==='2k'?'2k':rankingsTest==='500m'?'500m':'6k';
+    el.innerHTML = `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No ${testLabel} times recorded yet.</div>`;
     return;
   }
 
