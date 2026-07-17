@@ -821,7 +821,7 @@ body {
     <div class="nt" data-s="schedule" onclick="go('schedule')">Schedule</div>
     <div class="nt" data-s="races" onclick="go('races')">Races</div>
     <div class="nt hide-from-parent" data-s="roster" onclick="go('roster')">Roster</div>
-    <div class="nt hide-from-parent" data-s="lineup" onclick="go('lineup')">Lineup</div>
+    <div class="nt coach-only" data-s="lineup" onclick="go('lineup')">Lineup</div>
     <div class="nt coach-only" data-s="coach" onclick="go('coach')">Coach Hub</div>
     <div class="nt hide-from-parent" data-s="athlete" onclick="go('athlete')">Athlete Hub</div>
     <div class="nt" data-s="messages" onclick="go('messages')">Messages</div>
@@ -935,7 +935,7 @@ body {
         <div class="ql-label">Today</div>
         <div class="ql-title">Practice Schedule</div>
       </div>
-      <div class="ql hide-from-parent" onclick="go('lineup')">
+      <div class="ql coach-only" onclick="go('lineup')">
         <div class="ql-label">Boats</div>
         <div class="ql-title">Lineups</div>
       </div>
@@ -1779,8 +1779,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 // NAVIGATION
 // ════════════════════════════════════════════
 function go(screen) {
-  if(CU && CU.role==='parent' && ['roster','lineup','athlete'].includes(screen)) {
+  if(CU && CU.role==='parent' && ['roster','athlete'].includes(screen)) {
     toast("This section isn't available for parent accounts");
+    screen = 'home';
+  }
+  if(CU && screen==='lineup' && !['head-coach','asst-coach','admin'].includes(CU.role)) {
+    toast("Lineups are only available to coaches right now");
     screen = 'home';
   }
   if(CU && ['boathouse','ltr'].includes(screen)) {
