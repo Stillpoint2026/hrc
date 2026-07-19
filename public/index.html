@@ -1869,7 +1869,7 @@ function buildHome() {
   const end = new Date('2026-08-11');
   const days = Math.max(0, Math.ceil((end - new Date())/(1000*60*60*24)));
   document.getElementById('homeStatDays').textContent = days;
-  document.getElementById('homeStatAthletes').textContent = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).length || '—';
+  document.getElementById('homeStatAthletes').textContent = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).length || '—';
 }
 
 // ════════════════════════════════════════════
@@ -1989,7 +1989,7 @@ function buildRoster() {
     `<div class="fpill${f.id===rosterFilter?' active':''}" onclick="setRosterFilter('${f.id}')">${f.l}</div>`
   ).join('');
 
-  let athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  let athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
   if(rosterFilter==='U19') athletes = athletes.filter(a=>a.group==='U19');
   else if(rosterFilter==='U17') athletes = athletes.filter(a=>a.group==='U17');
   athletes = athletes.slice().sort(byLastName);
@@ -2137,7 +2137,7 @@ function renderNotRacingPanel() {
     if(l.cox) racingNames.add(l.cox);
   });
 
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
   // Temporary exclusion: "John Amendt" is a known duplicate account of "John Amendt IV" (who is racing),
   // pending confirmation of which login to keep. Remove this line once that's resolved.
   const notRacingExclusions = ['John Amendt'];
@@ -2260,7 +2260,7 @@ function renderLineupAbsentPanel() {
   if(!el) return;
   const dateVal = document.getElementById('lineupDate')?.value;
   if(!dateVal) { el.innerHTML = ''; return; }
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
   const absentToday = athletes.map(a=>{
     const rec = ABSENCES.filter(ab=>ab.athlete_id===a.id).find(ab=>dateTextMatches(ab.dates, dateVal));
     return rec ? {name:a.name, reason:rec.reason||'', dates:rec.dates||''} : null;
@@ -2419,7 +2419,7 @@ function assignedElsewhereInRace(race, excludeKey, excludeIdx) {
 function assignSeat(key, idx) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
   const race = lineupRaceLabel();
-  let all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  let all = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).sort(byLastName);
   if(lineupSquadFilter!=='All') all = all.filter(a=>a.group===lineupSquadFilter);
   const taken = assignedElsewhereInRace(race, key, idx);
   const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal) && !taken.has(a.name.toLowerCase()));
@@ -2436,7 +2436,7 @@ function assignSeat(key, idx) {
 function assignCox(key) {
   const lineupDateVal = document.getElementById('lineupDate')?.value;
   const race = lineupRaceLabel();
-  let all = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  let all = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).sort(byLastName);
   if(lineupSquadFilter!=='All') all = all.filter(a=>a.group===lineupSquadFilter);
   const taken = assignedElsewhereInRace(race, key, -1);
   const athletes = all.filter(a=>!absentOn(a.id, lineupDateVal) && !taken.has(a.name.toLowerCase()));
@@ -2875,7 +2875,7 @@ function switchCoachTab(tab) {
   const el = document.getElementById('coachTabContent');
 
   if(tab==='overview') {
-    const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+    const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
     el.innerHTML = athletes.map(a=>{
       const absCount = ABSENCES.filter(ab=>ab.athlete_id===a.id).length;
       const totalSess = Math.max(SESSIONS.length,1);
@@ -2898,7 +2898,7 @@ function switchCoachTab(tab) {
     }).join('') || '<div class="section" style="color:var(--text3)">No athletes yet.</div>';
 
   } else if(tab==='attendance') {
-    const rows = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+    const rows = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).sort(byLastName);
     const todayStr = fmtDate(new Date());
     el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Attendance</div>`+
       (rows.map(a=>{
@@ -2929,7 +2929,7 @@ function switchCoachTab(tab) {
 
   } else if(tab==='erg') {
     el.innerHTML = `<div class="section-label" style="padding:14px 16px 4px">Best 2k Times</div>`+
-      ATHLETES.filter(a=>['junior','rower'].includes(a.role)).map(a=>{
+      ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).map(a=>{
         const best = ERG_SCORES.filter(e=>e.athlete_id===a.id&&is2kTest(e.test)).sort((x,y)=>x.time_seconds-y.time_seconds)[0];
         return `<div class="coach-athlete-row" onclick="openAthleteDetail('${a.id}')">
           <div class="flex-between">
@@ -3413,7 +3413,7 @@ function getRiggingSetting(manufacturer, boatClass) {
 // ── COMPLIANCE (Dues / Waivers) ──
 function renderRecruitingList() {
   const el = document.getElementById('coachTabContent');
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).sort(byLastName);
   el.innerHTML = `<div style="padding:14px 16px 4px"><div class="section-label" style="padding:0">Recruiting Profiles</div></div>` +
     athletes.map(a=>{
       const p = getRecruitingProfile(a.id);
@@ -3489,7 +3489,7 @@ function viewRecruitingProfile(athleteId) {
 
 function renderCompliance() {
   const el = document.getElementById('coachTabContent');
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).sort(byLastName);
   const duesCount = athletes.filter(a=>a.dues_paid).length;
   const waiverCount = athletes.filter(a=>a.waiver_received).length;
 
@@ -4911,7 +4911,7 @@ async function deleteBoathouseItem(id, category) {
 
 function renderUniformsList() {
   const el = document.getElementById('boathouseTabContent');
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role)).sort(byLastName);
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at).sort(byLastName);
   const reported = athletes.filter(a=>a.uniform_size);
   el.innerHTML = `<div style="padding:14px 16px 4px">
     <div class="section-label" style="padding:0">Uniform Sizes</div>
@@ -5260,7 +5260,7 @@ function buildRankings() {
     `<div class="fpill${t.id===rankingsTest?' active':''}" onclick="setRankingsTest('${t.id}')">${t.label}</div>`
   ).join('');
 
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
   const ranked = athletes.map(a=>{
     const scores = ERG_SCORES.filter(e=>e.athlete_id===a.id && (
       rankingsTest==='2k' ? is2kTest(e.test) :
@@ -5489,7 +5489,7 @@ async function saveParentProfile() {
 // ════════════════════════════════════════════
 function populateAbsenceDropdown() {
   const sel = document.getElementById('absAthlete');
-  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role));
+  const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
   sel.innerHTML = '<option value="">Select athlete…</option>' +
     athletes.map(a=>`<option value="${a.id}" ${a.id===(CU.member_id||CU.id)?'selected':''}>${a.name}</option>`).join('');
 }
@@ -5677,9 +5677,21 @@ function openAthleteDetail(id) {
       </div>`:''}
     </div>
     <div style="padding:0 16px 16px">
+      ${['head-coach','admin'].includes(CU.role) ? `<button class="submit-btn" style="background:transparent;border:1px solid #e05c5c;color:#e05c5c;margin-bottom:10px" onclick="removeFromRoster('${a.id}','${(a.name||'').replace(/'/g,"\\'")}')">Remove from Roster</button>` : ''}
       <button class="submit-btn" style="background:var(--dark3);color:var(--text2)" onclick="closeAthleteModal()">Close</button>
     </div>`;
   document.getElementById('athleteModal').classList.add('open');
+}
+
+function removeFromRoster(id, name) {
+  if(!confirm(`Remove ${name} from the roster? Their historical erg scores, attendance, and race results will be kept, but they'll no longer appear on the active roster, leaderboard, or lineup builder.`)) return;
+  supaPatch('hrc_members', {id:id}, {removed_at: new Date().toISOString()}).then(()=>{
+    const a = ATHLETES.find(x=>x.id===id);
+    if(a) a.removed_at = new Date().toISOString();
+    toast(`${name} removed from roster`);
+    closeAthleteModal();
+    buildRoster();
+  });
 }
 
 function closeAthleteModal() {
