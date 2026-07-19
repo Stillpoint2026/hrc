@@ -2602,6 +2602,94 @@ function toggleRaceResults() {
     return;
   }
 
+  // Full field for each race, pulled from official results (rowtown.org). "us" flags our boat(s).
+  const FIELDS = {
+    '417 8+ (HAWK)': [
+      {name:'TBC Racing A', time:'4:53.04'},
+      {name:'HAWK', time:'5:12.17', us:true},
+      {name:'Mercer B', time:'5:16.86'},
+      {name:'Row Bladensburg', time:'5:44.42'},
+      {name:'Mercer C', time:'6:00.20'},
+    ],
+    '417 8+ (SJP)': [
+      {name:'Academy B', time:'5:01.82'},
+      {name:'TBC Racing C', time:'5:13.31'},
+      {name:'SJP', time:'5:37.31', us:true},
+      {name:'Swan Creek', time:'5:57.99'},
+    ],
+    '419 4+ (SJP)': [
+      {name:'SJP', time:'5:30.78', us:true},
+      {name:'TBC Racing B', time:'5:45.43'},
+      {name:'Conshohocken A', time:'5:53.27'},
+      {name:'Firebird A', time:'6:10.40'},
+    ],
+    '419 4+ (HAWK)': [
+      {name:'HAWK', time:'5:19.54', us:true},
+      {name:'Academy', time:'5:35.07'},
+      {name:'Mercer C', time:'5:39.01'},
+      {name:'Maritime B', time:'5:51.33'},
+      {name:'Phila City Rowing', time:'6:22.80'},
+    ],
+    '417 4+ B (SJP)': [
+      {name:'Academy A', time:'5:56.58'},
+      {name:'RNY-Manhattan A', time:'5:59.51'},
+      {name:'Conshohocken A', time:'6:00.63'},
+      {name:'Maritime', time:'6:13.49'},
+      {name:'SJP B', time:'6:32.32', us:true},
+    ],
+    '417 4+ (HAWK)': [
+      {name:'TBC Racing B', time:'5:46.83'},
+      {name:'Pelham Community', time:'5:52.07'},
+      {name:'HAWK', time:'6:07.05', us:true},
+      {name:'SJP A', time:'6:26.33', us:true},
+      {name:'Christian Brothers', time:'6:52.75'},
+    ],
+    '417 4+ A (SJP)': [
+      {name:'TBC Racing B', time:'5:46.83'},
+      {name:'Pelham Community', time:'5:52.07'},
+      {name:'HAWK', time:'6:07.05', us:true},
+      {name:'SJP A', time:'6:26.33', us:true},
+      {name:'Christian Brothers', time:'6:52.75'},
+    ],
+    '419 8+ (SJP)': [
+      {name:'Mercer B', time:'5:10.42'},
+      {name:'TBC Racing C', time:'5:22.00'},
+      {name:'Conshohocken A', time:'5:25.30'},
+      {name:'Prince William', time:'5:28.76'},
+      {name:'SJP', time:'5:29.78', us:true},
+    ],
+    '419 8+ (HAWK)': [
+      {name:'HAWK', time:'4:39.13', us:true},
+      {name:'Pelham Community A', time:'4:47.44'},
+      {name:'Conshohocken A', time:'5:01.23'},
+      {name:'Mercer C', time:'5:07.53'},
+      {name:'Hudson River', time:'5:21.61'},
+      {name:'TBC Racing A', time:'5:25.67'},
+    ],
+  };
+
+  const laneColors = ['#8a8a8a','#6a7a8a','#8a6a7a','#7a8a6a','#8a7a6a','#6a8a8a'];
+  const timeToSec = (t) => { const [m,s] = t.split(':'); return parseInt(m)*60 + parseFloat(s); };
+
+  function fieldLanesHTML(field) {
+    const sorted = field.slice().sort((a,b)=>timeToSec(a.time)-timeToSec(b.time));
+    const fastest = timeToSec(sorted[0].time);
+    let colorIdx = 0;
+    return sorted.map((b,i)=>{
+      const pct = Math.max(8, (fastest / timeToSec(b.time)) * 100);
+      const color = b.us ? 'var(--crimson)' : laneColors[colorIdx++ % laneColors.length];
+      return `<div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+        <div style="width:16px;font-family:'Courier New',monospace;font-size:10px;color:var(--text3);text-align:right">${i+1}</div>
+        <div style="flex:1;background:var(--border2);border-radius:3px;height:16px;position:relative;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;display:flex;align-items:center;padding-left:6px;box-sizing:border-box">
+            <span style="font-family:-apple-system,sans-serif;font-weight:${b.us?'700':'400'};font-size:10px;color:#fff;white-space:nowrap;overflow:hidden">${b.name}</span>
+          </div>
+        </div>
+        <div style="width:52px;font-family:'Courier New',monospace;font-size:10px;color:var(--text3);text-align:right">${b.time}</div>
+      </div>`;
+    }).join('');
+  }
+
   const placeColor = (p) => p==='1st' ? 'var(--green)' : (p==='2nd'||p==='3rd') ? 'var(--text)' : (p&&p.startsWith('Cancelled')) ? 'var(--text3)' : 'var(--text3)';
 
   el.innerHTML = `<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-bottom:8px">Philadelphia Youth Regatta — Jul 18</div>` +
@@ -2610,6 +2698,7 @@ function toggleRaceResults() {
       try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
       const crewList = [l.cox ? 'Cox: '+l.cox : null, ...seats.filter(Boolean)].filter(Boolean).join(', ');
       const isCancelled = l.place && l.place.startsWith('Cancelled');
+      const field = FIELDS[l.boat_label];
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border2)">
         <div style="display:flex;justify-content:space-between;align-items:center;font-family:-apple-system,sans-serif;font-size:13px">
           <span style="color:var(--text2)">${l.boat_label||''}</span>
@@ -2617,6 +2706,7 @@ function toggleRaceResults() {
           ${l.result_time?`<span style="color:var(--text3);font-family:'Courier New',monospace">${l.result_time}</span>`:''}
         </div>
         ${!isCancelled?`<div style="margin-top:4px;font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);line-height:1.5">${crewList}</div>`:''}
+        ${field?`<div style="margin-top:8px">${fieldLanesHTML(field)}</div>`:''}
       </div>`;
     }).join('');
   el.style.display = 'block';
