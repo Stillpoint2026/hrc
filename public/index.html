@@ -1005,6 +1005,8 @@ body {
       <div class="race-bd">
         <button class="race-lineup-btn" onclick="openLineupForRace('Philadelphia Youth Regatta')">View Lineup</button>
         <button class="race-lineup-btn" onclick="toggleRaceSchedule()" style="margin-top:8px">Race Day Schedule</button>
+        <button class="race-lineup-btn" onclick="toggleRaceResults()" style="margin-top:8px">Results</button>
+        <div id="raceResultsContent" style="display:none;margin-top:10px"></div>
         <div id="raceScheduleContent" style="display:none;margin-top:10px"></div>
       </div>
     </div>
@@ -2480,6 +2482,42 @@ async function deleteLineup(id, event) {
     renderSavedLineups();
     toast('Lineup deleted');
   } else { toast('Delete failed — try again'); }
+}
+
+function toggleRaceResults() {
+  const el = document.getElementById('raceResultsContent');
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  if(isOpen) { el.style.display = 'none'; return; }
+
+  const raceLineups = LINEUPS.filter(l=>l.race==='Philadelphia Youth Regatta — Jul 18')
+    .slice()
+    .sort((a,b)=>(a.boat_label||'').localeCompare(b.boat_label||''));
+
+  if(!raceLineups.length) {
+    el.innerHTML = `<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px">No results available yet.</div>`;
+    el.style.display = 'block';
+    return;
+  }
+
+  const placeColor = (p) => p==='1st' ? 'var(--green)' : (p==='2nd'||p==='3rd') ? 'var(--text)' : (p&&p.startsWith('Cancelled')) ? 'var(--text3)' : 'var(--text3)';
+
+  el.innerHTML = `<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-bottom:8px">Philadelphia Youth Regatta — Jul 18</div>` +
+    raceLineups.map(l=>{
+      let seats = [];
+      try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
+      const crewList = [l.cox ? 'Cox: '+l.cox : null, ...seats.filter(Boolean)].filter(Boolean).join(', ');
+      const isCancelled = l.place && l.place.startsWith('Cancelled');
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border2)">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-family:-apple-system,sans-serif;font-size:13px">
+          <span style="color:var(--text2)">${l.boat_label||''}</span>
+          <span style="color:${placeColor(l.place)};font-weight:600">${l.place||'—'}</span>
+          ${l.result_time?`<span style="color:var(--text3);font-family:'Courier New',monospace">${l.result_time}</span>`:''}
+        </div>
+        ${!isCancelled?`<div style="margin-top:4px;font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);line-height:1.5">${crewList}</div>`:''}
+      </div>`;
+    }).join('');
+  el.style.display = 'block';
 }
 
 function toggleRaceSchedule() {
