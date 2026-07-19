@@ -835,6 +835,7 @@ body {
   </div>
   <div class="nav-right">
     <div class="nav-user" id="navUser">—</div>
+    <div class="nav-user head-coach-only" style="cursor:pointer;color:var(--text3);margin-left:14px" onclick="go('finance')">Finance</div>
     <div class="nav-user" style="cursor:pointer;color:var(--text3);margin-left:14px" onclick="confirmSignOut()">Sign Out</div>
   </div>
 </nav>
@@ -1040,6 +1041,15 @@ body {
   </div>
 
   <!-- ROSTER -->
+  <!-- FINANCE (head coach only) -->
+  <div class="scr" id="scr-finance">
+    <div class="scr-hd">
+      <div class="scr-title">Finance</div>
+      <div class="scr-sub">Head coach only</div>
+    </div>
+    <div id="financeContent"></div>
+  </div>
+
   <div class="scr" id="scr-roster">
     <div class="scr-hd flex-between">
       <div>
@@ -1379,6 +1389,7 @@ let DOCUMENTS = [];
 let LTR_CAMPERS = [];
 let LTR_ATTENDANCE = [];
 let BOATHOUSE_ITEMS = [];
+let EXPENSES = [];
 let REPAIRS = [];
 let RECRUITING_PROFILES = [];
 let SHELLS = [];
@@ -1609,7 +1620,7 @@ async function initApp() {
   });
   document.getElementById('navUser').textContent = CU.name.split(' ')[0];
 
-  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs(), loadRecruitingProfiles(), loadShells(), loadLaunches(), loadEngines()]);
+  await Promise.all([loadAthletes(), loadSessions(), loadAbsences(), loadErgScores(), loadWorkouts(), loadResources(), loadLineups(), loadAnnouncements(), loadShifts(), loadBoats(), loadThreads(), loadDocuments(), loadOars(), loadLtrCampers(), loadLtrAttendance(), loadRiggingSettings(), loadBoathouseItems(), loadRepairs(), loadRecruitingProfiles(), loadShells(), loadLaunches(), loadEngines(), loadExpenses()]);
   await linkMemberRecord();
   const isCoachRole = ['head-coach','asst-coach','admin'].includes(CU.role);
   const me = ATHLETES.find(a=>a.id===CU.member_id);
@@ -1693,6 +1704,11 @@ async function loadLtrAttendance() {
 async function loadBoathouseItems() {
   const rows = await supaGet('hrc_boathouse_items', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'name.asc', 'limit': '300'});
   BOATHOUSE_ITEMS = rows || [];
+}
+
+async function loadExpenses() {
+  const rows = await supaGet('hrc_finance_expenses', {'club': 'eq.'+encodeURIComponent(HRC_CLUB), 'select': '*', 'order': 'expense_date.desc', 'limit': '500'});
+  EXPENSES = rows || [];
 }
 
 async function loadRepairs() {
@@ -1834,6 +1850,11 @@ function go(screen) {
       screen = 'home';
     }
   }
+  if(CU && screen==='finance' && !['head-coach','admin'].includes(CU.role)) {
+    toast("This section is only available to the head coach");
+    screen = 'home';
+  }
+  if(screen==='finance') buildFinance();
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nt').forEach(t=>t.classList.toggle('active',t.dataset.s===screen));
   const el = document.getElementById('scr-'+screen);
@@ -2500,6 +2521,101 @@ async function deleteLineup(id, event) {
     renderSavedLineups();
     toast('Lineup deleted');
   } else { toast('Delete failed — try again'); }
+}
+
+// ════════════════════════════════════════════
+// FINANCE (head coach only)
+// ════════════════════════════════════════════
+const FEE_PER_ATHLETE = 1200;
+const EXPENSE_CATEGORIES = [
+  {id:'race-entry', label:'Race Entry Fees'},
+  {id:'uniforms', label:'Uniforms'},
+  {id:'travel', label:'Travel'},
+  {id:'stipends', label:'Coaches Stipends'},
+  {id:'misc', label:'Misc'},
+];
+
+function buildFinance() {
+  const el = document.getElementById('financeContent');
+  if(!el) return;
+
+  const rowers = ATHLETES.filter(a=>['rower','junior'].includes(a.role));
+  const paidCount = rowers.filter(a=>a.dues_paid).length;
+  const revenue = paidCount * FEE_PER_ATHLETE;
+  const totalExpenses = EXPENSES.reduce((sum,e)=>sum+Number(e.amount||0),0);
+  const net = revenue - totalExpenses;
+
+  const statBox = (label, val, color) => `<div style="flex:1;padding:12px;background:var(--card-bg);border-radius:8px;border:1px solid var(--border2)">
+    <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">${label}</div>
+    <div style="font-family:'Courier New',monospace;font-weight:700;font-size:22px;color:${color};margin-top:4px">${fmtMoney(val)}</div>
+  </div>`;
+
+  let html = `<div style="padding:14px 16px;display:flex;gap:10px">
+    ${statBox('Revenue', revenue, 'var(--green)')}
+    ${statBox('Expenses', totalExpenses, '#e05c5c')}
+    ${statBox('Net', net, net>=0?'var(--text)':'#e05c5c')}
+  </div>`;
+
+  html += `<div style="padding:0 16px 14px">
+    <div class="section-label" style="padding:0 0 6px">Fees Collected</div>
+    <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2)">${paidCount} of ${rowers.length} athletes paid · ${fmtMoney(FEE_PER_ATHLETE)} each</div>
+    <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:4px">Check "Dues Paid" on each athlete's Roster profile to update this total.</div>
+  </div>`;
+
+  EXPENSE_CATEGORIES.forEach(cat=>{
+    const items = EXPENSES.filter(e=>e.category===cat.id).sort((a,b)=>(b.expense_date||'').localeCompare(a.expense_date||''));
+    const subtotal = items.reduce((s,e)=>s+Number(e.amount||0),0);
+    html += `<div style="padding:14px 16px;border-top:1px solid var(--border2)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="section-label" style="padding:0">${cat.label}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:'Courier New',monospace;font-size:13px;color:var(--text2)">${fmtMoney(subtotal)}</span>
+          <button class="race-lineup-btn" style="padding:4px 10px;font-size:12px" onclick="openAddExpense('${cat.id}')">+ Add</button>
+        </div>
+      </div>
+      ${items.length ? items.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border2)">
+        <div>
+          <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text)">${e.description||'—'}</div>
+          <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3)">${e.expense_date||''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:'Courier New',monospace;font-size:13px;color:var(--text2)">${fmtMoney(e.amount)}</span>
+          <span style="color:var(--text3);cursor:pointer;font-size:12px" onclick="deleteExpense('${e.id}')">delete</span>
+        </div>
+      </div>`).join('') : `<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);padding:6px 0">No entries yet.</div>`}
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function openAddExpense(category) {
+  const cat = EXPENSE_CATEGORIES.find(c=>c.id===category);
+  const description = prompt(`${cat.label} — description:`);
+  if(description===null) return;
+  const amountStr = prompt(`${cat.label} — amount ($):`);
+  if(amountStr===null) return;
+  const amount = parseFloat(amountStr);
+  if(isNaN(amount)) { toast('Enter a valid amount'); return; }
+  const dateStr = prompt(`${cat.label} — date (YYYY-MM-DD):`, new Date().toISOString().slice(0,10));
+  if(dateStr===null) return;
+
+  supaInsert('hrc_finance_expenses', {club: HRC_CLUB, category, description, amount, expense_date: dateStr}).then(res=>{
+    if(res) {
+      EXPENSES.push(Array.isArray(res)?res[0]:res);
+      toast('Added');
+      buildFinance();
+    }
+  });
+}
+
+function deleteExpense(id) {
+  if(!confirm('Delete this expense?')) return;
+  supaDelete('hrc_finance_expenses', {id: 'eq.'+id}).then(()=>{
+    EXPENSES = EXPENSES.filter(e=>e.id!==id);
+    toast('Deleted');
+    buildFinance();
+  });
 }
 
 function toggleGoldStandard() {
