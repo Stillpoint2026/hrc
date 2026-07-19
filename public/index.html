@@ -1189,6 +1189,10 @@ body {
     </div>
     <div class="filter-strip" id="rankingsFilter" style="padding:0 16px 12px;border:none"></div>
     <div id="rankingsContent"></div>
+    <div style="padding:16px">
+      <button class="race-lineup-btn" onclick="toggleGoldStandard()" style="width:100%">Gold Standard — What It Takes to Win</button>
+      <div id="goldStandardContent" style="display:none;margin-top:12px"></div>
+    </div>
   </div>
 
   <!-- THE BOATHOUSE -->
@@ -2482,6 +2486,46 @@ async function deleteLineup(id, event) {
     renderSavedLineups();
     toast('Lineup deleted');
   } else { toast('Delete failed — try again'); }
+}
+
+function toggleGoldStandard() {
+  const el = document.getElementById('goldStandardContent');
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  if(isOpen) { el.style.display = 'none'; return; }
+
+  const sectionStyle = 'margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border2)';
+  const rowStyle = 'display:flex;justify-content:space-between;padding:4px 0;font-family:-apple-system,sans-serif;font-size:13px';
+  const labelStyle = 'color:var(--text3)';
+  const valStyle = 'color:var(--text);font-family:\'Courier New\',monospace';
+
+  el.innerHTML = `
+    <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6">What it actually takes to win at the sport's biggest events for a boys' Youth 8+, based on real historical results. Times are benchmarks to train toward, not guarantees — technique, rigging, and race-day conditions all matter too.</div>
+
+    <div style="${sectionStyle}">
+      <div style="font-family:-apple-system,sans-serif;font-weight:600;font-size:14px;color:var(--crimson);margin-bottom:8px">Head Of The Charles — Men's Youth Eight</div>
+      <div style="${rowStyle}"><span style="${labelStyle}">Course</span><span style="${valStyle}">3 mi / 4,800m</span></div>
+      <div style="${rowStyle}"><span style="${labelStyle}">Course Record</span><span style="${valStyle}">14:12.1 (1:28.8/500m)</span></div>
+      <div style="${rowStyle}"><span style="${labelStyle}">5-Year Avg. Winning Time</span><span style="${valStyle}">14:42.9 (1:32.0/500m)</span></div>
+      <div style="${rowStyle}"><span style="${labelStyle}">Est. Individual 2k to Win</span><span style="${valStyle}">~5:44–5:52</span></div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Source: official HOCR results archive (hocr.org). 2k estimate uses the standard head-race-to-2k pacing differential (~4-6 sec/500m) — a coaching approximation, not a formula.</div>
+    </div>
+
+    <div style="${sectionStyle}">
+      <div style="font-family:-apple-system,sans-serif;font-weight:600;font-size:14px;color:var(--crimson);margin-bottom:8px">Henley Royal Regatta — Princess Elizabeth Cup</div>
+      <div style="${rowStyle}"><span style="${labelStyle}">Course</span><span style="${valStyle}">2,112m (1 mi 550 yd)</span></div>
+      <div style="${rowStyle}"><span style="${labelStyle}">Course Record</span><span style="${valStyle}">6:06 (St. Paul's, 2018)</span></div>
+      <div style="${rowStyle}"><span style="${labelStyle}">— Barrier Split</span><span style="${valStyle}">1:46</span></div>
+      <div style="${rowStyle}"><span style="${labelStyle}">— Fawley Split</span><span style="${valStyle}">2:58</span></div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Source: official HRR record holders list (hrr.co.uk). Henley is a side-by-side knockout format — margins matter more than raw time, and a clean multi-year time average isn't published, so the course record is the best available benchmark.</div>
+    </div>
+
+    <div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:600;font-size:14px;color:var(--crimson);margin-bottom:8px">USRowing Youth National Championships</div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text2);line-height:1.6">This is a 2,000m sprint final — the same distance as a standard 2k erg test, making it the most directly comparable benchmark of the three. Recent winning programs (Marin, RowAmerica Rye, St. Joseph's Prep, Greenwich Crew, Deerfield) are consistently in the 5:45-6:00 range for the A-Final. An exact multi-year average for this specific event wasn't reliably available at the time this was compiled — treat this as a general range, not a precise figure.</div>
+    </div>
+  `;
+  el.style.display = 'block';
 }
 
 function toggleRaceResults() {
