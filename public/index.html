@@ -2532,6 +2532,28 @@ const EXPENSE_CATEGORIES = [
   {id:'misc', label:'Misc'},
 ];
 
+// Coaches paid through the school (Learn to Row program) — excluded from HRC stipend budget.
+// Matched by last name, case-insensitive, so first-name variations don't cause misses.
+const SCHOOL_PAID_SURNAMES = ['reader','berman','evans','filiaci','noone','bilko','sweeney','morinigo','needham'];
+const STIPEND_RATE = 100;
+
+function isSchoolPaidCoach(name) {
+  const n = (name||'').toLowerCase();
+  return SCHOOL_PAID_SURNAMES.some(sn=>n.includes(sn));
+}
+
+function computeStipends() {
+  const byCoach = {};
+  SHIFTS.forEach(s=>{
+    const names = (s.coach_names||'').split(',').map(n=>n.trim()).filter(Boolean);
+    names.forEach(name=>{
+      if(isSchoolPaidCoach(name)) return;
+      byCoach[name] = (byCoach[name]||0) + 1;
+    });
+  });
+  return Object.entries(byCoach).map(([name,sessions])=>({name, sessions, amount: sessions*STIPEND_RATE})).sort((a,b)=>b.amount-a.amount);
+}
+
 function buildFinance() {
   const el = document.getElementById('financeContent');
   if(!el) return;
@@ -2539,7 +2561,10 @@ function buildFinance() {
   const rowers = ATHLETES.filter(a=>['rower','junior'].includes(a.role) && !a.removed_at);
   const paidCount = rowers.filter(a=>a.dues_paid).length;
   const revenue = paidCount * FEE_PER_ATHLETE;
-  const totalExpenses = EXPENSES.reduce((sum,e)=>sum+Number(e.amount||0),0);
+  const stipends = computeStipends();
+  const stipendTotal = stipends.reduce((s,c)=>s+c.amount,0);
+  const manualExpenses = EXPENSES.reduce((sum,e)=>sum+Number(e.amount||0),0);
+  const totalExpenses = manualExpenses + stipendTotal;
   const net = revenue - totalExpenses;
 
   const statBox = (label, val, color) => `<div style="flex:1;padding:12px;background:var(--card-bg);border-radius:8px;border:1px solid var(--border2)">
@@ -2559,7 +2584,23 @@ function buildFinance() {
     <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:4px">Check "Dues Paid" on each athlete's Roster profile to update this total.</div>
   </div>`;
 
-  EXPENSE_CATEGORIES.forEach(cat=>{
+  // Coaches Stipends — fully auto-calculated from shift assignments, $100/session, school-paid coaches excluded
+  html += `<div style="padding:14px 16px;border-top:1px solid var(--border2)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="section-label" style="padding:0">Coaches Stipends</div>
+      <span style="font-family:'Courier New',monospace;font-size:13px;color:var(--text2)">${fmtMoney(stipendTotal)}</span>
+    </div>
+    <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin:2px 0 8px">Auto-calculated at ${fmtMoney(STIPEND_RATE)}/session from shift sign-ups. School-paid coaches (Learn to Row) are excluded.</div>
+    ${stipends.length ? stipends.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border2)">
+      <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text)">${c.name}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3)">${c.sessions} session${c.sessions===1?'':'s'}</span>
+        <span style="font-family:'Courier New',monospace;font-size:13px;color:var(--text2)">${fmtMoney(c.amount)}</span>
+      </div>
+    </div>`).join('') : `<div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);padding:6px 0">No shifts assigned yet.</div>`}
+  </div>`;
+
+  EXPENSE_CATEGORIES.filter(cat=>cat.id!=='stipends').forEach(cat=>{
     const items = EXPENSES.filter(e=>e.category===cat.id).sort((a,b)=>(b.expense_date||'').localeCompare(a.expense_date||''));
     const subtotal = items.reduce((s,e)=>s+Number(e.amount||0),0);
     html += `<div style="padding:14px 16px;border-top:1px solid var(--border2)">
