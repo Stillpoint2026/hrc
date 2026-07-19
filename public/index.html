@@ -1003,7 +1003,9 @@ body {
         <div class="race-date-badge">Sat, Jul 18</div>
       </div>
       <div class="race-bd">
-        <button class="race-lineup-btn" onclick="openLineupForRace('Philadelphia Youth Regatta')">View Lineup</button>
+        <button class="race-lineup-btn" onclick="openLineupForRace('Philadelphia Youth Regatta')">Go to Lineup Builder</button>
+        <button class="race-lineup-btn" onclick="toggleQuickLineups('Philadelphia Youth Regatta','quickLineups1')" style="margin-top:8px">View Lineups</button>
+        <div id="quickLineups1" style="display:none;margin-top:10px"></div>
         <button class="race-lineup-btn" onclick="toggleRaceSchedule()" style="margin-top:8px">Race Day Schedule</button>
         <button class="race-lineup-btn" onclick="toggleRaceResults()" style="margin-top:8px">Results</button>
         <div id="raceResultsContent" style="display:none;margin-top:10px"></div>
@@ -1017,7 +1019,9 @@ body {
         <div class="race-date-badge">Jul 24–26</div>
       </div>
       <div class="race-bd">
-        <button class="race-lineup-btn" onclick="openLineupForRace('Independence Day Regatta')">View Lineup</button>
+        <button class="race-lineup-btn" onclick="openLineupForRace('Independence Day Regatta')">Go to Lineup Builder</button>
+        <button class="race-lineup-btn" onclick="toggleQuickLineups('Independence Day Regatta','quickLineups2')" style="margin-top:8px">View Lineups</button>
+        <div id="quickLineups2" style="display:none;margin-top:10px"></div>
       </div>
     </div>
     <div class="race-card">
@@ -1028,7 +1032,9 @@ body {
         <div class="race-date-badge">Aug 4–9</div>
       </div>
       <div class="race-bd">
-        <button class="race-lineup-btn" onclick="openLineupForRace('Royal Canadian Henley')">View Lineup</button>
+        <button class="race-lineup-btn" onclick="openLineupForRace('Royal Canadian Henley')">Go to Lineup Builder</button>
+        <button class="race-lineup-btn" onclick="toggleQuickLineups('Royal Canadian Henley','quickLineups3')" style="margin-top:8px">View Lineups</button>
+        <div id="quickLineups3" style="display:none;margin-top:10px"></div>
       </div>
     </div>
   </div>
@@ -2541,6 +2547,42 @@ function toggleGoldStandard() {
       <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Exact multi-year average not yet confirmed — range based on recent A-Finals.</div>
     </div>
   `;
+  el.style.display = 'block';
+}
+
+function toggleQuickLineups(raceMatch, elId) {
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  if(isOpen) { el.style.display = 'none'; return; }
+
+  const isCoach = ['head-coach','asst-coach','admin'].includes(CU?.role);
+  const shortMatch = raceMatch.split(' — ')[0].slice(0,15);
+  const matches = LINEUPS.filter(l=>(l.race||'').startsWith(shortMatch)).sort((a,b)=>(a.boat_label||'').localeCompare(b.boat_label||''));
+
+  if(!matches.length) {
+    el.innerHTML = `<div style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:13px;padding:8px 0">No lineups posted yet.</div>`;
+    el.style.display = 'block';
+    return;
+  }
+
+  el.innerHTML = matches.map(l=>{
+    const bc = BOAT_CLASSES.find(c=>c.id===l.boat_class);
+    const boatName = `${bc?bc.label:l.boat_class}${l.boat_label?' · '+l.boat_label:''}`;
+    if(l.coach_only && !isCoach) {
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border2);font-family:-apple-system,sans-serif;font-size:13px">
+        <div style="color:var(--text2)">${boatName}</div>
+        <div style="color:var(--text3);font-size:11px;margin-top:2px">Lineup not yet available</div>
+      </div>`;
+    }
+    let seats = [];
+    try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
+    const crewList = [l.cox ? 'Cox: '+l.cox : null, ...seats.filter(Boolean)].filter(Boolean).join(', ');
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border2)">
+      <div style="font-family:-apple-system,sans-serif;font-size:13px;color:var(--text2)">${boatName}</div>
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5">${crewList}</div>
+    </div>`;
+  }).join('');
   el.style.display = 'block';
 }
 
