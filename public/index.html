@@ -2138,10 +2138,7 @@ function renderNotRacingPanel() {
   });
 
   const athletes = ATHLETES.filter(a=>['junior','rower'].includes(a.role) && !a.removed_at);
-  // Temporary exclusion: "John Amendt" is a known duplicate account of "John Amendt IV" (who is racing),
-  // pending confirmation of which login to keep. Remove this line once that's resolved.
-  const notRacingExclusions = ['John Amendt'];
-  const notRacing = athletes.filter(a=>!racingNames.has(a.name) && !notRacingExclusions.includes(a.name)).sort(byLastName);
+  const notRacing = athletes.filter(a=>!racingNames.has(a.name)).sort(byLastName);
 
   if(!notRacing.length) {
     el.innerHTML = `<div class="card" style="margin-bottom:12px;border-color:var(--green)">
@@ -2539,7 +2536,7 @@ function buildFinance() {
   const el = document.getElementById('financeContent');
   if(!el) return;
 
-  const rowers = ATHLETES.filter(a=>['rower','junior'].includes(a.role));
+  const rowers = ATHLETES.filter(a=>['rower','junior'].includes(a.role) && !a.removed_at);
   const paidCount = rowers.filter(a=>a.dues_paid).length;
   const revenue = paidCount * FEE_PER_ATHLETE;
   const totalExpenses = EXPENSES.reduce((sum,e)=>sum+Number(e.amount||0),0);
