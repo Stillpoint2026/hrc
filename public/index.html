@@ -1059,7 +1059,7 @@ body {
       <select class="form-select" id="lineupRace" onchange="editingLineupId=null; onLineupRaceChange()">
         <option value="practice">Practice</option>
         <option>Philadelphia Youth Regatta — Jul 18</option>
-        <option>Independence Day Regatta — Jul 24–26</option>
+        <option>Independence Day Regatta — Jul 25</option>
         <option>Royal Canadian Henley — Aug 4–9</option>
       </select>
       <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
@@ -2150,11 +2150,19 @@ function renderSavedLineups() {
   el.innerHTML = sorted.map(l => {
     const isCurrent = raceMatchesCurrent(l.race, currentRace);
     const bc = BOAT_CLASSES.find(c=>c.id===l.boat_class);
+    const titleColor = isCurrent ? 'var(--text)' : '#e05c5c';
+
+    if(l.coach_only && !isCoach) {
+      return `<div class="card">
+        <div class="card-title" style="color:${titleColor}">${l.race||'—'} · ${bc?bc.label:l.boat_class}${l.boat_label?' · '+l.boat_label:''}</div>
+        <div class="card-sub">Lineup not yet available</div>
+      </div>`;
+    }
+
     let seats = [];
     try { seats = typeof l.seats==='string' ? JSON.parse(l.seats) : (l.seats||[]); } catch(e){}
     const filled = seats.filter(Boolean).length;
     const dt = l.updated_at ? new Date(l.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-    const titleColor = isCurrent ? 'var(--text)' : '#e05c5c';
     const expanded = expandedLineupId === l.id;
 
     const seatRows = seats.map((seat,i)=>{
