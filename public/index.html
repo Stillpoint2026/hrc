@@ -2532,9 +2532,10 @@ const EXPENSE_CATEGORIES = [
   {id:'misc', label:'Misc'},
 ];
 
-// Coaches paid through the school (Learn to Row program) — excluded from HRC stipend budget.
+// Coaches paid through the school (Learn to Row program), plus Tom Wedgwood (head coach/founder,
+// not paid a per-session stipend by HRC) — all excluded from the HRC stipend budget.
 // Matched by last name, case-insensitive, so first-name variations don't cause misses.
-const SCHOOL_PAID_SURNAMES = ['reader','berman','evans','filiaci','noone','bilko','sweeney','morinigo','needham'];
+const SCHOOL_PAID_SURNAMES = ['reader','berman','evans','filiaci','noone','bilko','sweeney','morinigo','needham','wedgwood'];
 const STIPEND_RATE = 100;
 
 function isSchoolPaidCoach(name) {
@@ -2545,7 +2546,7 @@ function isSchoolPaidCoach(name) {
 function computeStipends() {
   const byCoach = {};
   SHIFTS.forEach(s=>{
-    const names = (s.coach_names||'').split(',').map(n=>n.trim()).filter(Boolean);
+    const names = (s.coach_names||'').split(',').map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
     names.forEach(name=>{
       if(isSchoolPaidCoach(name)) return;
       byCoach[name] = (byCoach[name]||0) + 1;
