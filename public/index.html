@@ -2498,6 +2498,10 @@ function toggleGoldStandard() {
   const rowStyle = 'display:flex;justify-content:space-between;padding:4px 0;font-family:-apple-system,sans-serif;font-size:13px';
   const labelStyle = 'color:var(--text3)';
   const valStyle = 'color:var(--text);font-family:\'Courier New\',monospace';
+  const targetBox = (split) => `<div style="margin-top:10px;padding:10px 14px;background:rgba(224,92,92,0.12);border:1px solid var(--crimson);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-family:-apple-system,sans-serif;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text2)">Target 500m Split</span>
+    <span style="font-family:'Courier New',monospace;font-weight:700;font-size:20px;color:var(--crimson)">${split}</span>
+  </div>`;
 
   el.innerHTML = `
     <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6">What it takes to win at the sport's biggest events, boys' Youth 8+.</div>
@@ -2507,9 +2511,7 @@ function toggleGoldStandard() {
       <div style="${rowStyle}"><span style="${labelStyle}">Course</span><span style="${valStyle}">3 mi / 4,800m</span></div>
       <div style="${rowStyle}"><span style="${labelStyle}">Course Record</span><span style="${valStyle}">14:12.1 (1:28.8/500m)</span></div>
       <div style="${rowStyle}"><span style="${labelStyle}">5-Yr Avg. Winning Time</span><span style="${valStyle}">14:42.9 (1:32.0/500m)</span></div>
-      <div style="${rowStyle}"><span style="${labelStyle}">Est. Individual 2k to Win</span><span style="${valStyle}">~5:44–5:52</span></div>
-      <div style="${rowStyle}"><span style="${labelStyle}">Est. Avg. Watts to Win</span><span style="${valStyle}">~510–550W</span></div>
-      <div style="${rowStyle}"><span style="${labelStyle}">Est. Avg. Watts — Record Pace</span><span style="${valStyle}">~570–610W</span></div>
+      ${targetBox('1:32.0')}
       <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Source: hocr.org official results.</div>
     </div>
 
@@ -2519,6 +2521,7 @@ function toggleGoldStandard() {
       <div style="${rowStyle}"><span style="${labelStyle}">Course Record</span><span style="${valStyle}">6:06</span></div>
       <div style="${rowStyle}"><span style="${labelStyle}">— Barrier Split</span><span style="${valStyle}">1:46</span></div>
       <div style="${rowStyle}"><span style="${labelStyle}">— Fawley Split</span><span style="${valStyle}">2:58</span></div>
+      ${targetBox('1:26.6')}
       <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Source: hrr.co.uk record holders.</div>
     </div>
 
@@ -2526,7 +2529,8 @@ function toggleGoldStandard() {
       <div style="font-family:-apple-system,sans-serif;font-weight:600;font-size:14px;color:var(--crimson);margin-bottom:8px">USRowing Youth National Championships</div>
       <div style="${rowStyle}"><span style="${labelStyle}">Distance</span><span style="${valStyle}">2,000m</span></div>
       <div style="${rowStyle}"><span style="${labelStyle}">Recent A-Final Range</span><span style="${valStyle}">~5:45–6:00</span></div>
-      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Same distance as a 2k erg test — the most directly comparable benchmark. Exact multi-year average not yet confirmed.</div>
+      ${targetBox('1:26.3')}
+      <div style="font-family:-apple-system,sans-serif;font-weight:200;font-size:11px;color:var(--text3);margin-top:6px">Exact multi-year average not yet confirmed — range based on recent A-Finals.</div>
     </div>
   `;
   el.style.display = 'block';
