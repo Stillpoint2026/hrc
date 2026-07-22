@@ -5295,7 +5295,7 @@ function buildRankings() {
   const filterEl = document.getElementById('rankingsFilter');
   if(!el || !filterEl) return;
 
-  filterEl.innerHTML = [{id:'2k',label:'2,000m'},{id:'6k',label:'6,000m'},{id:'500m',label:'500m'}].map(t=>
+  filterEl.innerHTML = [{id:'2k',label:'2,000m'},{id:'6k',label:'6,000m'},{id:'500m',label:'500m'},{id:'2x30',label:'2x30 SS'}].map(t=>
     `<div class="fpill${t.id===rankingsTest?' active':''}" onclick="setRankingsTest('${t.id}')">${t.label}</div>`
   ).join('');
 
@@ -5304,6 +5304,7 @@ function buildRankings() {
     const scores = ERG_SCORES.filter(e=>e.athlete_id===a.id && (
       rankingsTest==='2k' ? is2kTest(e.test) :
       rankingsTest==='500m' ? ['8x500','500m'].includes(e.test) :
+      rankingsTest==='2x30' ? (e.test||'').startsWith('2x30 Steady State') :
       e.test==='6k'
     ));
     const best = scores.sort((x,y)=>x.time_seconds-y.time_seconds)[0];
@@ -5311,7 +5312,7 @@ function buildRankings() {
   }).filter(Boolean).sort((a,b)=>a.time-b.time);
 
   if(!ranked.length) {
-    const testLabel = rankingsTest==='2k'?'2k':rankingsTest==='500m'?'500m':'6k';
+    const testLabel = rankingsTest==='2k'?'2k':rankingsTest==='500m'?'500m':rankingsTest==='2x30'?'2x30 Steady State':'6k';
     el.innerHTML = `<div class="section" style="color:var(--text3);font-family:-apple-system,sans-serif;font-weight:200;font-size:14px">No ${testLabel} times recorded yet.</div>`;
     return;
   }
